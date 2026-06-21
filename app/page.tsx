@@ -4,6 +4,7 @@ import { useSession, signIn } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { FormatModal } from '@/components/FormatModal'
 
 function SunIcon() {
@@ -59,9 +60,61 @@ function PenIcon() {
   )
 }
 
+// ── Gender modal ───────────────────────────────────────────────────────────────
+const GENDER_OPTIONS = [
+  { id: 'male',   label: 'זכר',   sub: 'הדוח יכתב בלשון זכר' },
+  { id: 'female', label: 'נקבה',  sub: 'הדוח יכתב בלשון נקבה' },
+  { id: 'other',  label: 'אחר',   sub: 'הדוח יכתב בלשון ניטרלית' },
+] as const
+
+function GenderModal({ onSelect }: { onSelect: (gender: string) => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4
+      bg-black/40 backdrop-blur-sm animate-fade-in" dir="rtl">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl
+        border border-slate-200 dark:border-slate-700 shadow-2xl shadow-black/20 p-8 space-y-6">
+
+        {/* Title */}
+        <div className="text-center space-y-1.5">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+            פנייה בדוח
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            כיצד תרצה/י שנתייחסו אליך בדוח הגרפולוגי?
+          </p>
+        </div>
+
+        {/* Options */}
+        <div className="flex flex-col gap-3">
+          {GENDER_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => onSelect(opt.id)}
+              className="w-full py-4 px-5 rounded-2xl border-2 border-slate-200
+                dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500
+                hover:bg-blue-50/60 dark:hover:bg-blue-950/30
+                text-right transition-all duration-150 group"
+            >
+              <span className="block text-base font-semibold text-slate-800 dark:text-slate-100
+                group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                {opt.label}
+              </span>
+              <span className="block text-xs font-normal text-slate-400 dark:text-slate-500 mt-0.5">
+                {opt.sub}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { data: session, status } = useSession()
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -69,8 +122,14 @@ export default function Home() {
   }, [])
 
   const [showFormatModal, setShowFormatModal] = useState(false)
+  const [showGenderModal, setShowGenderModal] = useState(false)
   const isLoggedIn = status === 'authenticated'
   const isLoading = status === 'loading'
+
+  const handleGenderSelect = (gender: string) => {
+    setShowGenderModal(false)
+    router.push(`/analysis?gender=${gender}`)
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500
@@ -178,7 +237,7 @@ export default function Home() {
                 </span>
               </p>
               <button
-                onClick={() => {/* navigate to /analysis */}}
+                onClick={() => setShowGenderModal(true)}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4
                   bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600
                   hover:from-blue-500 hover:via-indigo-500 hover:to-violet-500
@@ -226,6 +285,7 @@ export default function Home() {
       </main>
 
       {showFormatModal && <FormatModal onClose={() => setShowFormatModal(false)} />}
+      {showGenderModal && <GenderModal onSelect={handleGenderSelect} />}
     </div>
   )
 }

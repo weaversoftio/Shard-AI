@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { writeFile, mkdir, readdir } from 'fs/promises'
+import { writeFile, mkdir, readdir, rm } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { runNormalization } from '@/lib/normalize'
@@ -33,22 +33,22 @@ export async function POST(req: NextRequest) {
 
   const pdfPath   = join(sessionDir, 'lined.pdf')
   const outputDir = join(sessionDir, 'lined')
+  await rm(outputDir, { recursive: true, force: true })
   await writeFile(pdfPath, Buffer.from(await file.arrayBuffer()))
 
   const result = await runNormalization('lined', pdfPath, outputDir)
 
-  // Attach sorted crop filenames for both the normalized and segmentation previews
-  if (result.status === 'ok' || result.status === 'warning') {
-    try {
-      const normDir = join(outputDir, 'normalized')
-      const allFiles = await readdir(normDir)
-      const cropFiles = allFiles
-        .filter(f => f.endsWith('.png'))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-      // segmentation/ always has the same filenames as normalized/
+  // Always attach crop filenames when available (for debugging on error too)
+  try {
+    const normDir = join(outputDir, 'normalized')
+    const allFiles = await readdir(normDir)
+    const cropFiles = allFiles
+      .filter(f => f.endsWith('.png'))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    if (cropFiles.length > 0) {
       return NextResponse.json({ ...result, cropFiles })
-    } catch { /* norm_dir missing — return result without preview */ }
-  }
+    }
+  } catch { /* norm_dir missing — return result without preview */ }
 
   return NextResponse.json(result)
 }

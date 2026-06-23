@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, Suspense } from 'react'
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
+import { Stepper } from '@/components/Stepper'
+import { UserMenu } from '@/components/UserMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Stage = 'analyzing' | 'words' | 'personality' | 'report' | 'done' | 'error'
@@ -107,6 +109,16 @@ function HomeIcon() {
   )
 }
 
+function XIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
 // ── Markdown → JSX ────────────────────────────────────────────────────────────
 function renderReport(text: string) {
   return text.split('\n').map((line, i) => {
@@ -145,7 +157,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   )
 }
 
-// ── Loading screen ─────────────────────────────────────────────────────────────
+// ── Loading screen — no X, no profile icon, shows stepper at step 3 ────────────
 function LoadingScreen({ currentStage }: { currentStage: string }) {
   const currentIdx = LOADING_STAGES.findIndex(s => s.id === currentStage)
 
@@ -155,12 +167,9 @@ function LoadingScreen({ currentStage }: { currentStage: string }) {
       dark:from-gray-950 dark:via-slate-900 dark:to-blue-950/40
       px-4" dir="rtl">
 
-      {/* Logo / title */}
-      <div className="mb-12 text-center">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-wide mb-1">
-          Shard<span className="text-blue-500">AI</span>
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">ניתוח גרפולוגי בתהליך...</p>
+      {/* Stepper — step 3 (ניתוח) is active */}
+      <div className="mb-12">
+        <Stepper active={3} />
       </div>
 
       {/* Stage steps */}
@@ -180,7 +189,6 @@ function LoadingScreen({ currentStage }: { currentStage: string }) {
                     : 'bg-white/50 dark:bg-white/5 border-slate-200 dark:border-slate-800 opacity-40'
                 }`}>
 
-              {/* Icon */}
               <div className={`flex-shrink-0 ${isDone ? 'text-emerald-500' : isActive ? 'text-blue-500' : 'text-slate-400'}`}>
                 {isDone
                   ? <CheckCircleIcon />
@@ -190,7 +198,6 @@ function LoadingScreen({ currentStage }: { currentStage: string }) {
                 }
               </div>
 
-              {/* Label */}
               <span className={`text-sm font-medium ${
                 isActive  ? 'text-blue-700 dark:text-blue-300'
                 : isDone  ? 'text-emerald-700 dark:text-emerald-400'
@@ -203,7 +210,7 @@ function LoadingScreen({ currentStage }: { currentStage: string }) {
         })}
       </div>
 
-      {/* Subtle pulsing indicator */}
+      {/* Pulsing dots */}
       <div className="mt-10 flex gap-1.5">
         {[0, 1, 2].map(i => (
           <div key={i}
@@ -216,17 +223,19 @@ function LoadingScreen({ currentStage }: { currentStage: string }) {
   )
 }
 
-// ── Report screen ──────────────────────────────────────────────────────────────
+// ── Report screen — has stepper (step 4), X button, and user menu ──────────────
 function ReportScreen({
   report,
   scores,
   onDownload,
   onBack,
+  onCleanup,
 }: {
   report:     string
   scores:     Record<string, Record<string, number>> | null
   onDownload: () => void
   onBack:     () => void
+  onCleanup:  () => Promise<void>
 }) {
   const { theme, setTheme } = useTheme()
   const isDev = process.env.NODE_ENV === 'development'
@@ -237,7 +246,7 @@ function ReportScreen({
       dark:from-gray-950 dark:via-slate-900 dark:to-blue-950/40
       transition-colors duration-300 print:bg-white" dir="rtl">
 
-      {/* Print CSS injected into head */}
+      {/* Print CSS */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -250,20 +259,36 @@ function ReportScreen({
         }
       `}</style>
 
-      {/* Header — hidden in print */}
+      {/* Header — X right | stepper truly centered | theme+user left */}
       <header className="no-print sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/10
-        bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-white">
-            Shard<span className="text-blue-500">AI</span>
-          </h1>
-          <div className="flex items-center gap-3">
+        bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-5 py-3">
+        <div className="relative flex items-center h-9">
+
+          {/* X button — pinned to physical right */}
+          <button
+            onClick={onBack}
+            aria-label="יציאה"
+            className="absolute right-0 w-8 h-8 rounded-full flex items-center justify-center
+              text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400
+              hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          >
+            <XIcon />
+          </button>
+
+          {/* Stepper — truly centered regardless of side widths */}
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <Stepper active={4} />
+          </div>
+
+          {/* Theme + user menu — pinned to physical left */}
+          <div className="absolute left-0 flex items-center gap-2">
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400
                 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
+            <UserMenu onBeforeSignOut={onCleanup} />
           </div>
         </div>
       </header>
@@ -274,17 +299,21 @@ function ReportScreen({
         <div className="print-report bg-white dark:bg-slate-800/60 rounded-3xl border border-slate-200/80
           dark:border-white/10 shadow-sm overflow-hidden">
 
-          {/* Card header */}
+          {/* Card header — screen only */}
           <div className="no-print px-8 py-6 border-b border-slate-100 dark:border-white/10 bg-gradient-to-l
             from-blue-50/60 to-indigo-50/40 dark:from-blue-950/20 dark:to-indigo-950/20">
             <h2 className="text-xl font-bold text-slate-800 dark:text-white">דוח גרפולוגי</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">ניתוח כתב יד מבוסס בינה מלאכותית</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+              הדוח הינו בגדר המלצה בלבד. התוצאות מדוייקות יותר עבור כותבים ביד ימין.
+            </p>
           </div>
 
           {/* Print-only title */}
           <div className="hidden print:block px-8 pt-8 pb-4 border-b border-slate-200 text-center">
             <h1 className="text-2xl font-bold text-slate-900">דוח גרפולוגי</h1>
-            <p className="text-sm text-slate-500 mt-1">הופק על ידי ShardAI • ניתוח כתב יד מבוסס בינה מלאכותית</p>
+            <p className="text-xs text-slate-500 mt-1.5">
+              הדוח הינו בגדר המלצה בלבד. התוצאות מדוייקות יותר עבור כותבים ביד ימין.
+            </p>
           </div>
 
           {/* Report body */}
@@ -314,7 +343,7 @@ function ReportScreen({
           </button>
         </div>
 
-        {/* Debug scores — dev mode only, hidden in print */}
+        {/* Debug scores — dev mode only */}
         {isDev && scores && (
           <details className="no-print group">
             <summary className="cursor-pointer text-xs text-slate-400 dark:text-slate-600
@@ -355,32 +384,70 @@ function ReportScreen({
 }
 
 // ── Error screen ───────────────────────────────────────────────────────────────
-function ErrorScreen({ error, onBack }: { error: string; onBack: () => void }) {
+function ErrorScreen({
+  error,
+  onBack,
+  onCleanup,
+}: {
+  error: string
+  onBack: () => void
+  onCleanup: () => Promise<void>
+}) {
+  const { theme, setTheme } = useTheme()
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center
+    <div className="min-h-screen flex flex-col
       bg-gradient-to-br from-slate-50 to-red-50/30
-      dark:from-gray-950 dark:to-red-950/10 px-4" dir="rtl">
-      <div className="max-w-sm w-full bg-white dark:bg-slate-800 rounded-3xl border
-        border-red-200 dark:border-red-900/60 shadow-sm p-8 text-center space-y-5">
-        <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center
-          justify-center mx-auto text-red-500">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
+      dark:from-gray-950 dark:to-red-950/10" dir="rtl">
+
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/10
+        bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 py-3">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <button
+            onClick={onBack}
+            aria-label="יציאה"
+            className="w-8 h-8 rounded-full flex items-center justify-center
+              text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400
+              hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          >
+            <XIcon />
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400
+                dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+            </button>
+            <UserMenu onBeforeSignOut={onCleanup} />
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-2">שגיאה בניתוח</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{error}</p>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="max-w-sm w-full bg-white dark:bg-slate-800 rounded-3xl border
+          border-red-200 dark:border-red-900/60 shadow-sm p-8 text-center space-y-5">
+          <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center
+            justify-center mx-auto text-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-2">שגיאה בניתוח</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{error}</p>
+          </div>
+          <button
+            onClick={onBack}
+            className="w-full py-2.5 rounded-xl bg-slate-800 dark:bg-white text-white
+              dark:text-slate-900 font-medium text-sm hover:opacity-90 transition-opacity">
+            חזרה לדף הבית
+          </button>
         </div>
-        <button
-          onClick={onBack}
-          className="w-full py-2.5 rounded-xl bg-slate-800 dark:bg-white text-white
-            dark:text-slate-900 font-medium text-sm hover:opacity-90 transition-opacity">
-          חזרה לדף הבית
-        </button>
       </div>
     </div>
   )
@@ -400,13 +467,22 @@ function ResultsContent() {
   const [isDone,       setIsDone]       = useState(false)
   const esRef = useRef<EventSource | null>(null)
 
+  const cleanupSession = useCallback(async () => {
+    if (!sessionId) return
+    try {
+      await fetch(`/api/session/cleanup?sessionId=${sessionId}`, { method: 'DELETE' })
+    } catch { /* best effort */ }
+  }, [sessionId])
+
   useEffect(() => {
     if (!sessionId) {
       setError('מזהה סשן חסר')
       return
     }
 
-    const es = new EventSource(`/api/analysis/start?sessionId=${encodeURIComponent(sessionId)}&gender=${encodeURIComponent(gender)}`)
+    const es = new EventSource(
+      `/api/analysis/start?sessionId=${encodeURIComponent(sessionId)}&gender=${encodeURIComponent(gender)}`
+    )
     esRef.current = es
 
     es.onmessage = (e) => {
@@ -437,23 +513,26 @@ function ResultsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
-  // Clean up session on tab close
+  // Cleanup on tab close
   useEffect(() => {
     const cleanup = () => {
-      if (sessionId) {
-        navigator.sendBeacon(`/api/session/cleanup?sessionId=${sessionId}`)
-      }
+      if (sessionId) navigator.sendBeacon(`/api/session/cleanup?sessionId=${sessionId}`)
     }
     window.addEventListener('beforeunload', cleanup)
     return () => window.removeEventListener('beforeunload', cleanup)
   }, [sessionId])
+
+  const handleBack = async () => {
+    await cleanupSession()
+    router.push('/')
+  }
 
   const handleDownloadPDF = () => {
     window.print()
   }
 
   if (error) {
-    return <ErrorScreen error={error} onBack={() => router.push('/')} />
+    return <ErrorScreen error={error} onBack={handleBack} onCleanup={cleanupSession} />
   }
 
   if (!isDone) {
@@ -465,7 +544,8 @@ function ResultsContent() {
       report={report}
       scores={scores}
       onDownload={handleDownloadPDF}
-      onBack={() => router.push('/')}
+      onBack={handleBack}
+      onCleanup={cleanupSession}
     />
   )
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { writeFile, mkdir, readdir } from 'fs/promises'
+import { writeFile, mkdir, readdir, rm } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { runNormalization } from '@/lib/normalize'
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
 
   const pdfPath   = join(sessionDir, 'blank.pdf')
   const outputDir = join(sessionDir, 'blank')
+  await rm(outputDir, { recursive: true, force: true })
   await writeFile(pdfPath, Buffer.from(await file.arrayBuffer()))
 
   const result = await runNormalization('blank', pdfPath, outputDir)

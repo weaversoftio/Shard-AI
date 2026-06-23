@@ -2,10 +2,10 @@
 
 import { useSession, signIn } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FormatModal } from '@/components/FormatModal'
+import { UserMenu } from '@/components/UserMenu'
 
 function SunIcon() {
   return (
@@ -27,15 +27,6 @@ function MoonIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  )
-}
-
-function PersonIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
     </svg>
   )
 }
@@ -62,29 +53,52 @@ function PenIcon() {
 
 // ── Gender modal ───────────────────────────────────────────────────────────────
 const GENDER_OPTIONS = [
-  { id: 'male',   label: 'זכר',   sub: 'הדוח יכתב בלשון זכר' },
-  { id: 'female', label: 'נקבה',  sub: 'הדוח יכתב בלשון נקבה' },
+  { id: 'male',   label: 'גבר',   sub: 'הדוח יכתב בלשון זכר' },
+  { id: 'female', label: 'אישה',  sub: 'הדוח יכתב בלשון נקבה' },
   { id: 'other',  label: 'אחר',   sub: 'הדוח יכתב בלשון ניטרלית' },
 ] as const
 
-function GenderModal({ onSelect }: { onSelect: (gender: string) => void }) {
+function XIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+function GenderModal({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (gender: string) => void
+  onClose: () => void
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4
       bg-black/40 backdrop-blur-sm animate-fade-in" dir="rtl">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl
         border border-slate-200 dark:border-slate-700 shadow-2xl shadow-black/20 p-8 space-y-6">
 
-        {/* Title */}
-        <div className="text-center space-y-1.5">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-            פנייה בדוח
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            כיצד תרצה/י שנתייחסו אליך בדוח הגרפולוגי?
-          </p>
+        {/* Header with X */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white">פנייה בדוח</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              כיצד תרצה/י שנתייחסו אליך בדוח הגרפולוגי?
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="סגור"
+            className="p-2 -mt-1 -ml-1 rounded-xl text-slate-400 hover:text-slate-700
+              dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700
+              transition-colors flex-shrink-0"
+          >
+            <XIcon />
+          </button>
         </div>
 
-        {/* Options */}
         <div className="flex flex-col gap-3">
           {GENDER_OPTIONS.map(opt => (
             <button
@@ -116,15 +130,23 @@ export default function Home() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   const [showFormatModal, setShowFormatModal] = useState(false)
   const [showGenderModal, setShowGenderModal] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // Auto-open gender modal when navigating back from the upload page
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('selectGender') === '1') {
+      setShowGenderModal(true)
+      window.history.replaceState({}, '', '/')
+    }
+  }, [status])
+
   const isLoggedIn = status === 'authenticated'
-  const isLoading = status === 'loading'
+  const isLoading  = status === 'loading'
 
   const handleGenderSelect = (gender: string) => {
     setShowGenderModal(false)
@@ -146,9 +168,7 @@ export default function Home() {
       {/* Top bar */}
       <header className="fixed top-0 inset-x-0 z-20 flex items-center justify-between px-5 py-4">
         <div />
-
         <div className="flex items-center gap-2.5">
-          {/* Theme toggle */}
           {mounted && (
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -164,25 +184,7 @@ export default function Home() {
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
           )}
-
-          {/* Avatar */}
-          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center
-            bg-white/80 dark:bg-slate-800/80 backdrop-blur-md
-            border border-slate-200/80 dark:border-slate-700/80
-            text-slate-400 dark:text-slate-500
-            shadow-sm transition-all duration-200">
-            {isLoggedIn && session?.user?.image ? (
-              <Image
-                src={session.user.image}
-                alt={session.user.name ?? 'משתמש'}
-                width={36}
-                height={36}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <PersonIcon />
-            )}
-          </div>
+          <UserMenu />
         </div>
       </header>
 
@@ -215,7 +217,6 @@ export default function Home() {
             <div className="h-px w-24 bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
           </div>
 
-          {/* Hebrew subtitle */}
           <p className="text-2xl sm:text-3xl font-semibold text-slate-700 dark:text-slate-200 mb-2 leading-snug">
             דוח גרפולוגיה
           </p>
@@ -248,13 +249,26 @@ export default function Home() {
               >
                 התחל ניתוח
               </button>
+              {/* Instructions — visible to authenticated users only */}
+              <button
+                onClick={() => setShowFormatModal(true)}
+                className="px-6 py-2.5 text-sm font-medium rounded-xl
+                  bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm
+                  border border-slate-200 dark:border-slate-700
+                  text-slate-500 dark:text-slate-400
+                  hover:text-slate-700 dark:hover:text-slate-200
+                  hover:bg-white dark:hover:bg-slate-700
+                  transition-all duration-200 shadow-sm"
+              >
+                הוראות ופורמט
+              </button>
             </div>
           ) : (
             <button
               onClick={() => signIn('google')}
               className="inline-flex items-center justify-center gap-3 px-6 py-3.5
                 bg-white dark:bg-slate-800
-                hover:bg-slate-50 dark:hover:bg-slate-750
+                hover:bg-slate-50
                 text-slate-700 dark:text-slate-200 font-semibold text-base
                 rounded-2xl border border-slate-200 dark:border-slate-700
                 shadow-md hover:shadow-lg
@@ -265,27 +279,16 @@ export default function Home() {
               <GoogleIcon />
             </button>
           )}
-          {/* Instructions and format button */}
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={() => setShowFormatModal(true)}
-              className="px-6 py-2.5 text-sm font-medium rounded-xl
-                bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm
-                border border-slate-200 dark:border-slate-700
-                text-slate-500 dark:text-slate-400
-                hover:text-slate-700 dark:hover:text-slate-200
-                hover:bg-white dark:hover:bg-slate-700
-                transition-all duration-200 shadow-sm"
-            >
-              הוראות ופורמט
-            </button>
-          </div>
-
         </div>
       </main>
 
       {showFormatModal && <FormatModal onClose={() => setShowFormatModal(false)} />}
-      {showGenderModal && <GenderModal onSelect={handleGenderSelect} />}
+      {showGenderModal && (
+        <GenderModal
+          onSelect={handleGenderSelect}
+          onClose={() => setShowGenderModal(false)}
+        />
+      )}
     </div>
   )
 }

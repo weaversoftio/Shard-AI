@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
-import { WarningModal } from '@/components/analysis/WarningModal'
+import { Stepper } from '@/components/Stepper'
+import { UserMenu } from '@/components/UserMenu'
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -31,16 +31,6 @@ function MoonIcon() {
   )
 }
 
-function PersonIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
-      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  )
-}
-
 function UploadIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
@@ -59,16 +49,6 @@ function DownloadIcon() {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  )
-}
-
-function EyeIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
     </svg>
   )
 }
@@ -103,6 +83,25 @@ function FileIcon() {
   )
 }
 
+function XIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  )
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type Step = 1 | 2
@@ -113,30 +112,25 @@ interface ValidationResult {
   error_type?: string
   line_count?: number
   message?: string
-  cropFiles?: string[]   // filenames present in both normalized/ and segmentation/
+  cropFiles?: string[]
 }
 
 // ── Error message map ──────────────────────────────────────────────────────
 
 function getErrorMessage(result: ValidationResult | null, step: Step): string {
   if (!result) return ''
-  const { error_type, line_count } = result
-
-  if (error_type === 'PARTIAL_FRAME')
-    return 'המסגרת לא זוהתה במלואה. אנא סרקו מחדש ווודאו שהמסגרת המלאה נראית בסריקה.'
+  const { error_type } = result
 
   if (step === 1) {
-    if (error_type === 'MISSING_SIGNATURE')
-      return 'לא זוהתה חתימה. אנא חתמו על הדף בשורה הקצרה בתחתית ועלו מחדש.'
-    if (error_type === 'TOO_FEW_LINES')
-      return `זוהו ${line_count ?? 0} שורות כתיבה. לניתוח תקין יש לכתוב בין 15-20 שורות. אנא סרקו ועלו מחדש.`
-    if (error_type === 'INVALID_TYPE')
-      return 'יש להעלות קובץ PDF בלבד.'
-    if (error_type === 'PROCESSING_ERROR')
-      return 'שגיאה בעיבוד הקובץ. אנא נסו שוב.'
+    if (error_type === 'MISSING_SIGNATURE')  return 'חסר חתימה'
+    if (error_type === 'PARTIAL_FRAME')      return 'יש להעלות מחדש- המסגרת חתוכה'
+    if (error_type === 'TOO_FEW_LINES')      return 'יש להעלות מחדש- אין מספיק שורות'
+    if (error_type === 'INVALID_TYPE')       return 'יש להעלות קובץ PDF בלבד.'
+    if (error_type === 'PROCESSING_ERROR')   return 'שגיאה בעיבוד הקובץ. אנא נסו שוב.'
   }
 
-  if (error_type === 'INVALID_TYPE') return 'יש להעלות קובץ PDF בלבד.'
+  if (error_type === 'PARTIAL_FRAME')    return 'יש להעלות מחדש- המסגרת חתוכה'
+if (error_type === 'INVALID_TYPE')     return 'יש להעלות קובץ PDF בלבד.'
   if (error_type === 'PROCESSING_ERROR') return 'שגיאה בעיבוד הקובץ. אנא נסו שוב.'
   return 'אירעה שגיאה. אנא נסו שוב.'
 }
@@ -173,11 +167,13 @@ function UploadZone({ status, fileName, onFile }: UploadZoneProps) {
         ${isProcessing ? 'cursor-wait opacity-70' : ''}
         ${dragging
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
-          : status === 'ok' || status === 'warning'
+          : status === 'ok'
             ? 'border-green-400 dark:border-green-600 bg-green-50/50 dark:bg-green-950/20'
-            : status === 'error'
-              ? 'border-red-400 dark:border-red-600 bg-red-50/50 dark:bg-red-950/20'
-              : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600 bg-slate-50/50 dark:bg-slate-800/30'
+            : status === 'warning'
+              ? 'border-amber-400 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-950/20'
+              : status === 'error'
+                ? 'border-red-400 dark:border-red-600 bg-red-50/50 dark:bg-red-950/20'
+                : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600 bg-slate-50/50 dark:bg-slate-800/30'
         }`}
     >
       <input
@@ -196,11 +192,13 @@ function UploadZone({ status, fileName, onFile }: UploadZoneProps) {
       ) : fileName ? (
         <div className="flex items-center justify-center gap-3 py-1">
           <span className={`flex-shrink-0 ${
-            status === 'ok' || status === 'warning'
+            status === 'ok'
               ? 'text-green-500 dark:text-green-400'
-              : status === 'error'
-                ? 'text-red-500 dark:text-red-400'
-                : 'text-slate-400'
+              : status === 'warning'
+                ? 'text-amber-500 dark:text-amber-400'
+                : status === 'error'
+                  ? 'text-red-500 dark:text-red-400'
+                  : 'text-slate-400'
           }`}>
             <FileIcon />
           </span>
@@ -251,45 +249,6 @@ function StatusBanner({ status, message }: { status: UploadStatus; message: stri
   )
 }
 
-// ── Step Indicator ────────────────────────────────────────────────────────
-
-function StepIndicator({ current }: { current: Step }) {
-  const steps = ['פורמט שורות', 'פורמט חלק']
-  return (
-    <div className="flex items-center justify-center gap-2">
-      {steps.map((label, i) => {
-        const idx = (i + 1) as Step
-        const done = idx < current
-        const active = idx === current
-        return (
-          <div key={i} className="flex items-center gap-2">
-            {i > 0 && (
-              <div className={`h-px w-10 transition-colors duration-300
-                ${done ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
-            )}
-            <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                transition-all duration-300
-                ${done
-                  ? 'bg-blue-600 text-white'
-                  : active
-                    ? 'bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-md shadow-blue-500/30'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
-                }`}>
-                {done ? <CheckIcon /> : idx}
-              </div>
-              <span className={`text-sm font-medium hidden sm:block
-                ${active ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                {label}
-              </span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Crop Preview ──────────────────────────────────────────────────────────
 
 function cropLabel(filename: string): string {
@@ -302,13 +261,14 @@ interface CropPreviewProps {
   sessionId: string
   type: 'lined' | 'blank'
   files: string[]
+  cacheKey: number
 }
 
-function CropPreview({ sessionId, type, files }: CropPreviewProps) {
+function CropPreview({ sessionId, type, files, cacheKey }: CropPreviewProps) {
   const [activeFile, setActiveFile] = useState<string>(files[0] ?? '')
 
   const imgUrl = (file: string, view: 'normalized' | 'segmentation') =>
-    `/api/session/image?sessionId=${encodeURIComponent(sessionId)}&type=${type}&view=${view}&file=${encodeURIComponent(file)}`
+    `/api/session/image?sessionId=${encodeURIComponent(sessionId)}&type=${type}&view=${view}&file=${encodeURIComponent(file)}&v=${cacheKey}`
 
   if (files.length === 0) return null
 
@@ -316,7 +276,6 @@ function CropPreview({ sessionId, type, files }: CropPreviewProps) {
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden
       bg-slate-50 dark:bg-slate-800/40">
 
-      {/* Header */}
       <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700
         flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -327,7 +286,6 @@ function CropPreview({ sessionId, type, files }: CropPreviewProps) {
         </span>
       </div>
 
-      {/* Main viewer: normalized left, segmentation right */}
       {activeFile && type === 'lined' && (
         <div className="grid grid-cols-2 gap-px bg-slate-200 dark:bg-slate-700">
           <div className="bg-white dark:bg-slate-900 flex flex-col">
@@ -359,7 +317,6 @@ function CropPreview({ sessionId, type, files }: CropPreviewProps) {
         </div>
       )}
 
-      {/* Blank page: single visualization */}
       {type === 'blank' && activeFile && (
         <div className="bg-white dark:bg-slate-900 p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -372,7 +329,6 @@ function CropPreview({ sessionId, type, files }: CropPreviewProps) {
         </div>
       )}
 
-      {/* Thumbnail strip */}
       <div className="flex gap-1.5 overflow-x-auto p-2 bg-slate-100 dark:bg-slate-800/60"
         style={{ scrollbarWidth: 'thin' }}>
         {files.map(file => (
@@ -403,14 +359,13 @@ function CropPreview({ sessionId, type, files }: CropPreviewProps) {
 // ── Main Page ─────────────────────────────────────────────────────────────
 
 export default function AnalysisPage() {
-  const { data: session, status: authStatus } = useSession()
+  const { status: authStatus } = useSession()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const searchParams = useSearchParams()
   const gender = searchParams.get('gender') ?? 'other'
   const [mounted, setMounted] = useState(false)
 
-  // One stable sessionId per page visit
   const [sessionId] = useState(() =>
     typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).slice(2)
   )
@@ -421,15 +376,14 @@ export default function AnalysisPage() {
   const [linedFile, setLinedFile]               = useState<File | null>(null)
   const [linedStatus, setLinedStatus]           = useState<UploadStatus>('idle')
   const [linedResult, setLinedResult]           = useState<ValidationResult | null>(null)
-  const [warningAccepted, setWarningAccepted]   = useState(false)
-  const [showWarningModal, setShowWarningModal] = useState(false)
+  const [linedCacheKey, setLinedCacheKey]       = useState(0)
 
   // Step 2 state
   const [blankFile, setBlankFile]               = useState<File | null>(null)
   const [blankStatus, setBlankStatus]           = useState<UploadStatus>('idle')
   const [blankResult, setBlankResult]           = useState<ValidationResult | null>(null)
+  const [blankCacheKey, setBlankCacheKey]       = useState(0)
 
-  // Starting analysis
   const [isStarting, setIsStarting]             = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
@@ -444,15 +398,26 @@ export default function AnalysisPage() {
     } catch { /* best effort */ }
   }, [sessionId])
 
-  // Cleanup on tab/window close
   useEffect(() => {
     window.addEventListener('beforeunload', cleanup)
     return () => window.removeEventListener('beforeunload', cleanup)
   }, [cleanup])
 
-  const handleCancel = async () => {
+  // X button — always full cleanup + home
+  const handleClose = async () => {
     await cleanup()
     router.push('/')
+  }
+
+  // Step 1 back → gender selection (cleanup since we're abandoning this session)
+  const handleBackStep1 = async () => {
+    await cleanup()
+    router.push('/?selectGender=1')
+  }
+
+  // Step 2 back → step 1 (no cleanup, still in flow)
+  const handleBackStep2 = () => {
+    setStep(1)
   }
 
   // ── Step 1: lined upload ────────────────────────────────────────────────
@@ -461,7 +426,6 @@ export default function AnalysisPage() {
     setLinedFile(file)
     setLinedStatus('uploading')
     setLinedResult(null)
-    setWarningAccepted(false)
 
     const fd = new FormData()
     fd.append('file', file)
@@ -471,35 +435,15 @@ export default function AnalysisPage() {
       const res  = await fetch('/api/upload/lined', { method: 'POST', body: fd })
       const data = (await res.json()) as ValidationResult
       setLinedResult(data)
-
-      if (data.status === 'warning') {
-        setLinedStatus('warning')
-        setShowWarningModal(true)
-      } else if (data.status === 'ok') {
-        setLinedStatus('ok')
-      } else {
-        setLinedStatus('error')
-      }
+      setLinedCacheKey(Date.now())
+      setLinedStatus(data.status === 'ok' ? 'ok' : data.status === 'warning' ? 'warning' : 'error')
     } catch {
       setLinedStatus('error')
       setLinedResult({ status: 'error', error_type: 'PROCESSING_ERROR' })
     }
   }
 
-  const handleWarningContinue = () => {
-    setShowWarningModal(false)
-    setWarningAccepted(true)
-  }
-
-  const handleWarningUpdate = () => {
-    setShowWarningModal(false)
-    setLinedFile(null)
-    setLinedStatus('idle')
-    setLinedResult(null)
-    setWarningAccepted(false)
-  }
-
-  const canContinue = linedStatus === 'ok' || (linedStatus === 'warning' && warningAccepted)
+  const canContinue = linedStatus === 'ok' || linedStatus === 'warning'
 
   // ── Step 2: blank upload ────────────────────────────────────────────────
 
@@ -516,6 +460,7 @@ export default function AnalysisPage() {
       const res  = await fetch('/api/upload/blank', { method: 'POST', body: fd })
       const data = (await res.json()) as ValidationResult
       setBlankResult(data)
+      setBlankCacheKey(Date.now())
       setBlankStatus(data.status === 'ok' ? 'ok' : 'error')
     } catch {
       setBlankStatus('error')
@@ -525,15 +470,11 @@ export default function AnalysisPage() {
 
   const canStartAnalysis = blankStatus === 'ok'
 
-  // ── Start analysis ──────────────────────────────────────────────────────
-
   const handleStartAnalysis = () => {
     if (!canStartAnalysis || isStarting) return
     setIsStarting(true)
     router.push(`/results?sessionId=${sessionId}&gender=${gender}`)
   }
-
-  // ── Shared layout values ────────────────────────────────────────────────
 
   if (authStatus === 'loading') {
     return (
@@ -559,7 +500,21 @@ export default function AnalysisPage() {
 
       {/* Top bar */}
       <header className="fixed top-0 inset-x-0 z-20 flex items-center justify-between px-5 py-4">
-        <div />
+        {/* X button — exits and clears session */}
+        <button
+          onClick={handleClose}
+          aria-label="יציאה"
+          className="w-9 h-9 rounded-full flex items-center justify-center
+            bg-white/80 dark:bg-slate-800/80 backdrop-blur-md
+            border border-slate-200/80 dark:border-slate-700/80
+            text-slate-500 dark:text-slate-400
+            hover:text-red-600 dark:hover:text-red-400
+            hover:bg-white dark:hover:bg-slate-700
+            transition-all duration-200 shadow-sm"
+        >
+          <XIcon />
+        </button>
+
         <div className="flex items-center gap-2.5">
           {mounted && (
             <button
@@ -576,18 +531,7 @@ export default function AnalysisPage() {
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
           )}
-
-          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center
-            bg-white/80 dark:bg-slate-800/80 backdrop-blur-md
-            border border-slate-200/80 dark:border-slate-700/80
-            text-slate-400 dark:text-slate-500 shadow-sm">
-            {session?.user?.image ? (
-              <Image src={session.user.image} alt={session.user.name ?? 'משתמש'}
-                width={36} height={36} className="w-full h-full object-cover" />
-            ) : (
-              <PersonIcon />
-            )}
-          </div>
+          <UserMenu onBeforeSignOut={cleanup} />
         </div>
       </header>
 
@@ -595,9 +539,9 @@ export default function AnalysisPage() {
       <main className="min-h-screen flex flex-col items-center justify-center px-4 pb-8 pt-24">
         <div className="w-full max-w-lg mx-auto animate-slide-up">
 
-          {/* Step indicator */}
+          {/* 4-step progress indicator */}
           <div className="mb-8">
-            <StepIndicator current={step} />
+            <Stepper active={step} />
           </div>
 
           {/* Card */}
@@ -615,39 +559,30 @@ export default function AnalysisPage() {
                     פורמט שורות
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    יש לכתוב 20 שורות על נושא לבחירתכם (באמת כל נושא שבא לכם!), ולחתום את שמכם
-                    בשורה הקצרה בתחתית הדף.
+                    יש לכתוב 20 שורות על נושא לבחירתכם ולחתום בשורה הקצרה בתחתית הדף.
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                    עדיף להשתמש בעט כדורי בצבע שחור או כחול.
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                    לתוצאות מדויקות יותר, מומלץ לסרוק דרך מדפסת.
                   </p>
                 </div>
 
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                  <a
-                    href="/formats.pdf"
-                    download="דף-שורות.pdf"
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5
-                      text-sm font-medium rounded-xl
-                      bg-slate-100 dark:bg-slate-800
-                      text-slate-600 dark:text-slate-300
-                      hover:bg-slate-200 dark:hover:bg-slate-700
-                      transition-colors duration-200"
-                  >
-                    <DownloadIcon />
-                    הורדת דף השורות
-                  </a>
-                  <button
-                    onClick={() => window.open('/formats.pdf', '_blank')}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5
-                      text-sm font-medium rounded-xl
-                      bg-slate-100 dark:bg-slate-800
-                      text-slate-600 dark:text-slate-300
-                      hover:bg-slate-200 dark:hover:bg-slate-700
-                      transition-colors duration-200"
-                  >
-                    <EyeIcon />
-                    לראות דוגמא
-                  </button>
-                </div>
+                {/* Download template */}
+                <a
+                  href="/Lined.pdf"
+                  download="דף-שורות.pdf"
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2.5
+                    text-sm font-medium rounded-xl
+                    bg-slate-100 dark:bg-slate-800
+                    text-slate-600 dark:text-slate-300
+                    hover:bg-slate-200 dark:hover:bg-slate-700
+                    transition-colors duration-200"
+                >
+                  <DownloadIcon />
+                  הורדת דף השורות
+                </a>
 
                 {/* Upload zone */}
                 <UploadZone
@@ -662,35 +597,36 @@ export default function AnalysisPage() {
                     status={linedStatus}
                     message={
                       linedStatus === 'ok'
-                        ? `הקובץ הועלה בהצלחה — זוהו ${linedResult?.line_count ?? 0} שורות כתיבה.`
-                        : linedStatus === 'warning' && warningAccepted
-                          ? `ממשיכים עם ${linedResult?.line_count ?? 0} שורות כתיבה.`
+                        ? 'הקובץ הועלה בהצלחה!'
+                        : linedStatus === 'warning'
+                          ? 'הקובץ הועלה בהצלחה- מספר השורות מצומצם, תיתכן פגיעה בתוצאות'
                           : getErrorMessage(linedResult, 1)
                     }
                   />
                 )}
 
-                {/* Crop preview (debug) */}
-                {(linedStatus === 'ok' || (linedStatus === 'warning' && warningAccepted)) &&
-                  linedResult?.cropFiles && linedResult.cropFiles.length > 0 && (
+                {/* Crop preview */}
+                {linedResult?.cropFiles && linedResult.cropFiles.length > 0 && (
                   <CropPreview
                     sessionId={sessionId}
                     type="lined"
                     files={linedResult.cropFiles}
+                    cacheKey={linedCacheKey}
                   />
                 )}
 
                 {/* Footer buttons */}
                 <div className="flex gap-3 pt-1">
                   <button
-                    onClick={handleCancel}
-                    className="flex-1 py-3 rounded-2xl font-semibold text-sm
+                    onClick={handleBackStep1}
+                    className="flex items-center justify-center gap-1.5 flex-1 py-3 rounded-2xl font-semibold text-sm
                       bg-slate-100 dark:bg-slate-800
                       text-slate-600 dark:text-slate-300
                       hover:bg-slate-200 dark:hover:bg-slate-700
                       transition-all duration-200 active:scale-95"
                   >
-                    ביטול
+                    <ArrowRightIcon />
+                    אחורה
                   </button>
                   <button
                     onClick={() => setStep(2)}
@@ -719,38 +655,29 @@ export default function AnalysisPage() {
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     כתבו את המספרים 1 עד 30 על הדף, מסודרים ב-3 טורים.
-                    לדוגמא טור אחד 1-10, טור שני 11-20, טור שלישי 21-30.
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                    עדיף להשתמש בעט כדורי בצבע שחור או כחול.
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                    לתוצאות מדויקות יותר, מומלץ לסרוק דרך מדפסת.
                   </p>
                 </div>
 
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                  <a
-                    href="/formats.pdf"
-                    download="דף-חלק.pdf"
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5
-                      text-sm font-medium rounded-xl
-                      bg-slate-100 dark:bg-slate-800
-                      text-slate-600 dark:text-slate-300
-                      hover:bg-slate-200 dark:hover:bg-slate-700
-                      transition-colors duration-200"
-                  >
-                    <DownloadIcon />
-                    הורדת דף החלק
-                  </a>
-                  <button
-                    onClick={() => window.open('/formats.pdf', '_blank')}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5
-                      text-sm font-medium rounded-xl
-                      bg-slate-100 dark:bg-slate-800
-                      text-slate-600 dark:text-slate-300
-                      hover:bg-slate-200 dark:hover:bg-slate-700
-                      transition-colors duration-200"
-                  >
-                    <EyeIcon />
-                    לראות דוגמא
-                  </button>
-                </div>
+                {/* Download template */}
+                <a
+                  href="/Blank.pdf"
+                  download="דף-חלק.pdf"
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2.5
+                    text-sm font-medium rounded-xl
+                    bg-slate-100 dark:bg-slate-800
+                    text-slate-600 dark:text-slate-300
+                    hover:bg-slate-200 dark:hover:bg-slate-700
+                    transition-colors duration-200"
+                >
+                  <DownloadIcon />
+                  הורדת דף החלק
+                </a>
 
                 {/* Upload zone */}
                 <UploadZone
@@ -765,32 +692,34 @@ export default function AnalysisPage() {
                     status={blankStatus}
                     message={
                       blankStatus === 'ok'
-                        ? 'הקובץ הועלה בהצלחה.'
+                        ? 'הקובץ הועלה בהצלחה!'
                         : getErrorMessage(blankResult, 2)
                     }
                   />
                 )}
 
-                {/* Blank page preview (debug) — shows the column-detection visualization */}
+                {/* Blank page preview */}
                 {blankStatus === 'ok' && blankResult?.cropFiles && blankResult.cropFiles.length > 0 && (
                   <CropPreview
                     sessionId={sessionId}
                     type="blank"
                     files={blankResult.cropFiles}
+                    cacheKey={blankCacheKey}
                   />
                 )}
 
                 {/* Footer buttons */}
                 <div className="flex gap-3 pt-1">
                   <button
-                    onClick={handleCancel}
-                    className="flex-1 py-3 rounded-2xl font-semibold text-sm
+                    onClick={handleBackStep2}
+                    className="flex items-center justify-center gap-1.5 flex-1 py-3 rounded-2xl font-semibold text-sm
                       bg-slate-100 dark:bg-slate-800
                       text-slate-600 dark:text-slate-300
                       hover:bg-slate-200 dark:hover:bg-slate-700
                       transition-all duration-200 active:scale-95"
                   >
-                    ביטול
+                    <ArrowRightIcon />
+                    אחורה
                   </button>
                   <button
                     onClick={handleStartAnalysis}
@@ -816,14 +745,6 @@ export default function AnalysisPage() {
         </div>
       </main>
 
-      {/* Warning modal */}
-      {showWarningModal && linedResult && (
-        <WarningModal
-          lineCount={linedResult.line_count ?? 0}
-          onContinue={handleWarningContinue}
-          onUpdate={handleWarningUpdate}
-        />
-      )}
     </div>
   )
 }

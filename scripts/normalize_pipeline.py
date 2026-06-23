@@ -218,11 +218,13 @@ def _seg_median_gap(comps):
     return float(np.median(pos_gaps)) * SEG_GAP_MULT if pos_gaps else 20
 
 
-def _seg_merge_comps(comps):
+def _seg_merge_comps(comps, max_gap=None):
     if not comps:
         return []
     comps = sorted(comps, key=lambda b: b[0])
     thresh = _seg_median_gap(comps)
+    if max_gap is not None:
+        thresh = min(thresh, max_gap)
     merged = []
     cx, cy, cw, ch = comps[0]
     for (x, y, w, h) in comps[1:]:
@@ -244,19 +246,32 @@ def get_word_boxes(img_bgr):
     h, w = gray.shape
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
+    # Remove ALL detected horizontal lines (printed template rules).
+    # Using argmax only removed the single strongest line; here we zero every
+    # row whose line-open signal exceeds 25% of the peak, catching both the
+    # top and bottom rules that appear in each line strip.
     kernel_w = max(30, w // 6)
     h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_w, 1))
     h_lines  = cv2.morphologyEx(binary, cv2.MORPH_OPEN, h_kernel)
     row_sums = h_lines.sum(axis=1)
-    baseline_y = h
     if row_sums.max() > 0:
-        baseline_y = int(np.argmax(row_sums))
-        binary[max(0, baseline_y - 5):, :] = 0
+        line_thresh = row_sums.max() * 0.25
+        for y_pos in np.where(row_sums > line_thresh)[0]:
+            binary[max(0, y_pos - 5):y_pos + 6, :] = 0
+
+    # Remove top margin and left/right edge pixels to kill frame-border artifacts.
+    # detect_and_crop_frame crops to the CENTER of the frame lines, so up to half
+    # the bar thickness remains at each edge. 20px covers bars up to ~40px thick.
     binary[:SEG_TOP_MARGIN, :] = 0
+    binary[:, :20] = 0
+    binary[:, w - 20:] = 0
 
     comps = _seg_get_comps(binary)
     comps = [(x, y, cw, ch) for (x, y, cw, ch) in comps if y >= SEG_TOP_MARGIN]
-    return _seg_merge_comps(comps)
+    # Cap merge gap so two far-apart edge remnants can never merge into a
+    # full-width box (self-referential threshold would otherwise set thresh
+    # to their own gap × SEG_GAP_MULT, which is always larger than the gap).
+    return _seg_merge_comps(comps, max_gap=w // 5)
 
 # ── Column Detection (Blank Page) ─────────────────────────────────────────────
 
@@ -410,6 +425,13 @@ def validate_lined(pdf_path, output_dir):
             word_boxes = get_word_boxes(norm_bgr)            # boxes on normalized image
 
             if len(word_boxes) == 0:
+                os.remove(crop_path)
+                continue
+
+            # Require at least one box tall enough to be real handwriting.
+            # At 300 DPI the shortest plausible letter is ~15px; thinner boxes
+            # are printed-rule remnants or CamScanner noise.
+            if max(bh for (_, _, _, bh) in word_boxes) < 15:
                 os.remove(crop_path)
                 continue
 

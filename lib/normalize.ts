@@ -7,6 +7,7 @@ export interface NormalizeResult {
   line_count?: number
   norm_dir?: string
   column_count?: number
+  is_numeric?: boolean
   output_dir?: string
   message?: string
 }
@@ -23,12 +24,17 @@ export function runNormalization(
       '--mode', mode,
       '--input', inputPath,
       '--output-dir', outputDir,
-    ])
+    ], {
+      env: { ...process.env },
+    })
 
     let stdout = ''
     let stderr = ''
     proc.stdout.on('data', (d) => { stdout += d.toString() })
-    proc.stderr.on('data', (d) => { stderr += d.toString() })
+    proc.stderr.on('data', (d) => {
+      stderr += d.toString()
+      process.stderr.write(d)
+    })
 
     proc.on('close', (code) => {
       try {

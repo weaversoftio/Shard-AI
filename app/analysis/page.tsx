@@ -321,7 +321,7 @@ function CropPreview({ sessionId, type, files, cacheKey }: CropPreviewProps) {
         <div className="bg-white dark:bg-slate-900 p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/session/image?sessionId=${encodeURIComponent(sessionId)}&type=blank&file=${encodeURIComponent(activeFile)}`}
+            src={`/api/session/image?sessionId=${encodeURIComponent(sessionId)}&type=blank&file=${encodeURIComponent(activeFile)}&v=${cacheKey}`}
             alt="blank page columns"
             className="w-full object-contain rounded"
             style={{ maxHeight: 200 }}
@@ -344,7 +344,7 @@ function CropPreview({ sessionId, type, files, cacheKey }: CropPreviewProps) {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={type === 'lined' ? imgUrl(file, 'normalized') : `/api/session/image?sessionId=${encodeURIComponent(sessionId)}&type=blank&file=${encodeURIComponent(file)}`}
+              src={type === 'lined' ? imgUrl(file, 'normalized') : `/api/session/image?sessionId=${encodeURIComponent(sessionId)}&type=blank&file=${encodeURIComponent(file)}&v=${cacheKey}`}
               alt={cropLabel(file)}
               className="bg-white dark:bg-slate-950 object-contain"
               style={{ height: 36, width: 'auto', minWidth: 32, maxWidth: 80 }}

@@ -14,7 +14,7 @@ Prints a single JSON object to stdout with keys:
   message      optional detail string
   norm_dir     (ok/warning) path to normalized crops dir
 """
-import sys, json, os, argparse, shutil
+import sys, json, os, base64, argparse, shutil
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -22,6 +22,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 import fitz
+import anthropic
 from scipy.signal import find_peaks
 from scipy.ndimage import uniform_filter1d
 
@@ -334,7 +335,7 @@ def _filter_isolated_bands(bands):
     return kept
 
 
-def column_detection(img, out_dir, basename):
+def column_detection(img, out_dir, basename, source_img=None):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     fx1, fy1, fx2, fy2 = detect_frame_bounds(img)
     gray_inner = gray[fy1:fy2, fx1:fx2]
@@ -349,11 +350,18 @@ def column_detection(img, out_dir, basename):
         if bx == 0 or by == 0 or bx + bw >= wi or by + bh >= hi:
             clean[labels == lbl] = 0
 
-    col_profile = uniform_filter1d(clean.sum(axis=0).astype(float), size=max(1, wi // 80))
-    raw_bands   = _bands_from_profile(col_profile, threshold_ratio=0.02,
-                                      min_gap=max(5, wi // 100))
-    col_bands   = [b for b in raw_bands if (b[1] - b[0]) >= 25]
+    # Zero out edge strips to kill any residual frame border that survived component filtering
+    edge = max(50, wi // 40)
+    clean[:, :edge] = 0
+    clean[:, wi - edge:] = 0
+    clean[:edge, :] = 0
+    clean[hi - edge:, :] = 0
 
+    # Use finer smoothing and smaller min_gap so closely-spaced columns aren't merged
+    col_profile = uniform_filter1d(clean.sum(axis=0).astype(float), size=max(1, wi // 120))
+    raw_bands   = _bands_from_profile(col_profile, threshold_ratio=0.02,
+                                      min_gap=max(3, wi // 300))
+    col_bands   = [b for b in raw_bands if (b[1] - b[0]) >= 20]
     vis            = img.copy()
     col_boxes      = []
     min_col_height = hi // 5
@@ -369,9 +377,21 @@ def column_detection(img, out_dir, basename):
         cy1, cy2 = y_bands[0][0], y_bands[-1][1]
         if (cy2 - cy1) < min_col_height:
             continue
-        real_col_idx += 1
         abs_cx1, abs_cy1 = fx1 + cx1, fy1 + cy1
         abs_cx2, abs_cy2 = fx1 + cx2, fy1 + cy2
+
+        # Claude verifies each candidate: crop from source_img (original scan) for best quality
+        verify_src = source_img if source_img is not None else img
+        sh, sw = verify_src.shape[:2]
+        ih, iw = img.shape[:2]
+        sx1 = int(abs_cx1 * sw / iw); sy1 = int(abs_cy1 * sh / ih)
+        sx2 = int(abs_cx2 * sw / iw); sy2 = int(abs_cy2 * sh / ih)
+        col_crop = verify_src[sy1:sy2, sx1:sx2]
+        if not _claude_verify_column(col_crop):
+            print(f'[vision] column ({cx1},{cx2}) rejected', file=sys.stderr)
+            continue
+
+        real_col_idx += 1
         col_boxes.append((abs_cx1, abs_cy1, abs_cx2, abs_cy2))
         cv2.rectangle(vis, (abs_cx1, abs_cy1), (abs_cx2, abs_cy2), (0, 0, 255), 3)
         cv2.putText(vis, f"col {real_col_idx}", (abs_cx1 + 4, abs_cy1 + 30),
@@ -474,6 +494,40 @@ def validate_lined(pdf_path, output_dir):
     except Exception as e:
         return {"status": "error", "error_type": "PROCESSING_ERROR", "message": str(e)}
 
+# ── Claude Vision: per-column numeric check ───────────────────────────────────
+
+def _claude_verify_column(col_img_bgr):
+    """
+    Ask Claude Vision whether a detected column strip is actually handwritten numbers.
+    Returns True (keep), False (discard). Fails open (True) if API is unavailable.
+    """
+    api_key = os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('CLAUDE_API_KEY')
+    print(f'[vision] api_key found: {bool(api_key)}', file=sys.stderr)
+    if not api_key:
+        print('[vision] no API key — keeping column by default', file=sys.stderr)
+        return True
+    try:
+        _, buf = cv2.imencode('.jpg', col_img_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        b64 = base64.b64encode(buf.tobytes()).decode('utf-8')
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=5,
+            messages=[{
+                'role': 'user',
+                'content': [
+                    {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': b64}},
+                    {'type': 'text',  'text': 'Does this image show a column of handwritten numbers? Answer only YES or NO.'},
+                ]
+            }]
+        )
+        answer = response.content[0].text.strip().upper()
+        print(f'[vision] column answer: {answer}', file=sys.stderr)
+        return answer.startswith('YES')
+    except Exception as e:
+        print(f'[vision] error: {e}', file=sys.stderr)
+        return True  # fail open
+
 # ── Validation: Blank Page ────────────────────────────────────────────────────
 
 def validate_blank(pdf_path, output_dir):
@@ -490,11 +544,17 @@ def validate_blank(pdf_path, output_dir):
         basename  = Path(pdf_path).stem
         norm_gray = normalize_image(framed)
         norm_bgr  = cv2.cvtColor(norm_gray, cv2.COLOR_GRAY2BGR)
-
         os.makedirs(output_dir, exist_ok=True)
-        col_boxes = column_detection(norm_bgr, output_dir, basename)
 
-        return {"status": "ok", "column_count": len(col_boxes), "output_dir": output_dir}
+        # norm_bgr drives detection + visualization; framed gives Claude better quality crops
+        col_boxes = column_detection(norm_bgr, output_dir, basename, source_img=framed)
+
+        return {
+            "status":       "ok",
+            "column_count": len(col_boxes),
+            "is_numeric":   len(col_boxes) > 0,
+            "output_dir":   output_dir,
+        }
 
     except Exception as e:
         return {"status": "error", "error_type": "PROCESSING_ERROR", "message": str(e)}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { Stepper } from '@/components/Stepper'
 import { UserMenu } from '@/components/UserMenu'
@@ -455,10 +456,15 @@ function ErrorScreen({
 
 // ── Main page (wrapped in Suspense for useSearchParams) ────────────────────────
 function ResultsContent() {
-  const searchParams = useSearchParams()
-  const router       = useRouter()
-  const sessionId    = searchParams.get('sessionId') ?? ''
-  const gender       = searchParams.get('gender') ?? 'other'
+  const searchParams   = useSearchParams()
+  const router         = useRouter()
+  const { data: session } = useSession()
+
+  const sessionId  = searchParams.get('sessionId') ?? ''
+  const gender     = searchParams.get('gender') ?? 'other'
+  const snapshotId = searchParams.get('snapshot') ?? ''
+
+  const isSnapshotMode = Boolean(snapshotId)
 
   const [currentStage, setCurrentStage] = useState<string>('analyzing')
   const [report,       setReport]       = useState<string>('')
@@ -468,13 +474,30 @@ function ResultsContent() {
   const esRef = useRef<EventSource | null>(null)
 
   const cleanupSession = useCallback(async () => {
-    if (!sessionId) return
+    if (!sessionId || isSnapshotMode) return
     try {
       await fetch(`/api/session/cleanup?sessionId=${sessionId}`, { method: 'DELETE' })
     } catch { /* best effort */ }
-  }, [sessionId])
+  }, [sessionId, isSnapshotMode])
 
+  // Snapshot mode: load frozen record from DB
   useEffect(() => {
+    if (!isSnapshotMode) return
+    fetch(`/api/history/${snapshotId}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(record => {
+        const data = JSON.parse(record.snapshot_data)
+        setReport(data.report ?? '')
+        setScores(data.scores ?? null)
+        setIsDone(true)
+      })
+      .catch(() => setError('לא ניתן לטעון את הדוח'))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshotId])
+
+  // Live mode: stream from SSE and save snapshot on completion
+  useEffect(() => {
+    if (isSnapshotMode) return
     if (!sessionId) {
       setError('מזהה סשן חסר')
       return
@@ -491,10 +514,28 @@ function ResultsContent() {
         setCurrentStage(data.stage)
 
         if (data.stage === 'done') {
-          setReport(data.report ?? '')
-          setScores(data.scores ?? null)
+          const reportText = data.report ?? ''
+          const scoresData = data.scores ?? null
+          setReport(reportText)
+          setScores(scoresData)
           setIsDone(true)
           es.close()
+
+          // Silently persist a frozen snapshot
+          if (session?.user?.email) {
+            const reportTitle = new Date().toLocaleString('he-IL', {
+              day: 'numeric', month: 'long', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })
+            fetch('/api/history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                reportTitle,
+                snapshotData: JSON.stringify({ report: reportText, scores: scoresData }),
+              }),
+            }).catch(() => { /* silent — history save is best-effort */ })
+          }
         } else if (data.stage === 'error') {
           setError(data.message ?? 'שגיאה לא ידועה')
           es.close()
@@ -511,20 +552,25 @@ function ResultsContent() {
 
     return () => es.close()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId])
+  }, [sessionId, isSnapshotMode])
 
-  // Cleanup on tab close
+  // Cleanup on tab close (live mode only)
   useEffect(() => {
+    if (isSnapshotMode) return
     const cleanup = () => {
       if (sessionId) navigator.sendBeacon(`/api/session/cleanup?sessionId=${sessionId}`)
     }
     window.addEventListener('beforeunload', cleanup)
     return () => window.removeEventListener('beforeunload', cleanup)
-  }, [sessionId])
+  }, [sessionId, isSnapshotMode])
 
   const handleBack = async () => {
-    await cleanupSession()
-    router.push('/')
+    if (isSnapshotMode) {
+      router.push('/history')
+    } else {
+      await cleanupSession()
+      router.push('/')
+    }
   }
 
   const handleDownloadPDF = () => {

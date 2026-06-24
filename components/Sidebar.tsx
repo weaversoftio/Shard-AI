@@ -63,7 +63,7 @@ const NAV_ITEMS = [
   { label: 'התחל ניתוח',       href: '/?selectGender=1', icon: <PlayIcon />,      disabled: false },
   { label: 'מדריך שימוש',      href: '/guide',           icon: <BookIcon />,      disabled: false },
   { label: 'הוראות ופורמטים',  href: '/formats',         icon: <ClipboardIcon />, disabled: false },
-  { label: 'היסטוריית דוחות',  href: '/history',         icon: <ClockIcon />,     disabled: true  },
+  { label: 'היסטוריית דוחות',  href: '/history',         icon: <ClockIcon />,     disabled: false },
 ] as const
 
 export function Sidebar() {
@@ -72,6 +72,7 @@ export function Sidebar() {
   const pathname = usePathname()
 
   if (!session) return null
+  if (pathname.startsWith('/results')) return null
 
   return (
     <aside

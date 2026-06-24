@@ -2,7 +2,7 @@
 
 import { useSession, signIn } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { UserMenu } from '@/components/UserMenu'
 import Image from 'next/image'
@@ -183,6 +183,40 @@ function FeatureCard({ icon, title, body }: { icon: React.ReactNode; title: stri
   )
 }
 
+// ── Toast notification ─────────────────────────────────────────────────────────
+
+type ToastType = 'login' | 'denied' | null
+
+const TOAST_CONFIG: Record<NonNullable<ToastType>, { title: string; body: string; color: string }> = {
+  login: {
+    title: 'נדרשת התחברות',
+    body:  'יש להתחבר לפני שניתן לגשת לדף זה.',
+    color: 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200',
+  },
+  denied: {
+    title: 'גישה נדחתה',
+    body:  'הדוח שניסית לפתוח אינו שייך לחשבונך.',
+    color: 'bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200',
+  },
+}
+
+function Toast({ type, onClose }: { type: NonNullable<ToastType>; onClose: () => void }) {
+  const cfg = TOAST_CONFIG[type]
+  return (
+    <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[60] w-full max-w-sm mx-auto
+      flex items-start gap-3 px-5 py-4 rounded-2xl border shadow-lg
+      animate-fade-in ${cfg.color}`} dir="rtl">
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm">{cfg.title}</p>
+        <p className="text-xs opacity-80 mt-0.5">{cfg.body}</p>
+      </div>
+      <button onClick={onClose} aria-label="סגור" className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity mt-0.5">
+        <XIcon />
+      </button>
+    </div>
+  )
+}
+
 // ── Page ────────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -192,8 +226,28 @@ export default function Home() {
   const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [showGenderModal, setShowGenderModal] = useState(false)
+  const [toast, setToast] = useState<ToastType>(null)
+  const toastRead = useRef(false)
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Read the URL param exactly once — useRef guard prevents Strict Mode double-fire
+  useEffect(() => {
+    if (toastRead.current) return
+    toastRead.current = true
+    const t = new URLSearchParams(window.location.search).get('toast')
+    if (t === 'login' || t === 'denied') {
+      setToast(t as ToastType)
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
+
+  // Auto-dismiss whenever a toast becomes active
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -375,6 +429,9 @@ export default function Home() {
           onClose={() => setShowGenderModal(false)}
         />
       )}
+
+      {/* Toast notifications */}
+      {toast && <Toast type={toast} onClose={() => setToast(null)} />}
     </div>
   )
 }

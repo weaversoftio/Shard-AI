@@ -225,7 +225,6 @@ export default function Home() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
-  const [showGenderModal, setShowGenderModal] = useState(false)
   const [toast, setToast] = useState<ToastType>(null)
   const toastRead = useRef(false)
 
@@ -249,21 +248,8 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [toast])
 
-  useEffect(() => {
-    if (status !== 'authenticated') return
-    if (searchParams.get('selectGender') === '1') {
-      setShowGenderModal(true)
-      window.history.replaceState({}, '', '/')
-    }
-  }, [status, searchParams])
-
   const isLoggedIn = status === 'authenticated'
   const isLoading  = status === 'loading'
-
-  const handleGenderSelect = (gender: string) => {
-    setShowGenderModal(false)
-    router.push(`/analysis?gender=${gender}`)
-  }
 
   return (
     <div className="min-h-screen bg-[var(--background)] dark:bg-slate-950 transition-colors duration-300">
@@ -357,7 +343,7 @@ export default function Home() {
                 </span>
               </p>
               <button
-                onClick={() => setShowGenderModal(true)}
+                onClick={() => router.push('/analysis')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2
                   px-10 py-4 rounded-2xl
                   bg-slate-900 hover:bg-slate-700 dark:bg-white dark:hover:bg-slate-100
@@ -421,14 +407,6 @@ export default function Home() {
         </section>
 
       </main>
-
-      {/* Modals */}
-      {showGenderModal && (
-        <GenderModal
-          onSelect={handleGenderSelect}
-          onClose={() => setShowGenderModal(false)}
-        />
-      )}
 
       {/* Toast notifications */}
       {toast && <Toast type={toast} onClose={() => setToast(null)} />}

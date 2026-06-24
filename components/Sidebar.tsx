@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
@@ -59,79 +60,140 @@ function ClockIcon() {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: 'מסך בית',          href: '/',               icon: <HomeIcon />,      disabled: false },
-  { label: 'התחל ניתוח',       href: '/?selectGender=1', icon: <PlayIcon />,      disabled: false },
-  { label: 'מדריך שימוש',      href: '/guide',           icon: <BookIcon />,      disabled: false },
-  { label: 'הוראות ופורמטים',  href: '/formats',         icon: <ClipboardIcon />, disabled: false },
-  { label: 'היסטוריית דוחות',  href: '/history',         icon: <ClockIcon />,     disabled: false },
+  { label: 'מסך בית',          href: '/',        icon: <HomeIcon />,      disabled: false },
+  { label: 'התחל ניתוח',       href: '/analysis', icon: <PlayIcon />,      disabled: false },
+  { label: 'מדריך שימוש',      href: '/guide',   icon: <BookIcon />,      disabled: false },
+  { label: 'הוראות ופורמטים',  href: '/formats', icon: <ClipboardIcon />, disabled: false },
+  { label: 'היסטוריית דוחות',  href: '/history', icon: <ClockIcon />,     disabled: false },
 ] as const
 
 export function Sidebar() {
   const { data: session } = useSession()
   const router   = useRouter()
   const pathname = usePathname()
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
 
   if (!session) return null
   if (pathname.startsWith('/results')) return null
 
+  const onAnalysisPage = pathname.startsWith('/analysis')
+
+  const handleNavClick = (href: string) => {
+    if (onAnalysisPage && href !== '/analysis') {
+      setPendingHref(href)
+    } else {
+      router.push(href)
+    }
+  }
+
+  const confirmLeave = () => {
+    if (pendingHref) {
+      router.push(pendingHref)
+      setPendingHref(null)
+    }
+  }
+
   return (
-    <aside
-      dir="rtl"
-      className="w-60 flex-shrink-0 sticky top-0 h-screen
-        bg-white dark:bg-slate-900
-        border-l border-slate-100 dark:border-slate-800
-        flex flex-col overflow-hidden"
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5
-        border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
-        <div className="relative w-8 h-8 flex-shrink-0">
-          <Image src="/logo.png" alt="Shard AI" fill unoptimized className="object-contain rounded-lg" />
+    <>
+      <aside
+        dir="rtl"
+        className="w-60 flex-shrink-0 sticky top-0 h-screen
+          bg-white dark:bg-slate-900
+          border-l border-slate-100 dark:border-slate-800
+          flex flex-col overflow-hidden"
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 px-5 py-5
+          border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+          <div className="relative w-8 h-8 flex-shrink-0">
+            <Image src="/logo.png" alt="Shard AI" fill unoptimized className="object-contain rounded-lg" />
+          </div>
+          <span className="font-black text-slate-800 dark:text-white text-sm tracking-wide">SHARD AI</span>
         </div>
-        <span className="font-black text-slate-800 dark:text-white text-sm tracking-wide">SHARD AI</span>
-      </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="ניווט ראשי">
-        <ul className="space-y-1" role="list">
-          {NAV_ITEMS.map(item => {
-            const isActive = !item.disabled && (
-              item.href === '/'
-                ? pathname === '/'
-                : pathname.startsWith(item.href as string)
-            )
-            return (
-              <li key={item.label} role="listitem">
-                <button
-                  onClick={() => !item.disabled && router.push(item.href)}
-                  disabled={item.disabled}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl
-                    text-right transition-all duration-200
-                    ${item.disabled
-                      ? 'opacity-40 cursor-not-allowed'
-                      : isActive
-                        ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                >
-                  <span className={`flex-shrink-0 ${isActive ? 'text-white dark:text-slate-900' : ''}`}>
-                    {item.icon}
-                  </span>
-                  <span className="flex-1 font-medium text-sm">{item.label}</span>
-                  {item.disabled && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md
-                      bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-                      בקרוב
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="ניווט ראשי">
+          <ul className="space-y-1" role="list">
+            {NAV_ITEMS.map(item => {
+              const isActive = !item.disabled && (
+                item.href === '/'
+                  ? pathname === '/'
+                  : pathname.startsWith(item.href as string)
+              )
+              return (
+                <li key={item.label} role="listitem">
+                  <button
+                    onClick={() => !item.disabled && handleNavClick(item.href)}
+                    disabled={item.disabled}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl
+                      text-right transition-all duration-200
+                      ${item.disabled
+                        ? 'opacity-40 cursor-not-allowed'
+                        : isActive
+                          ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                  >
+                    <span className={`flex-shrink-0 ${isActive ? 'text-white dark:text-slate-900' : ''}`}>
+                      {item.icon}
                     </span>
-                  )}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+                    <span className="flex-1 font-medium text-sm">{item.label}</span>
+                    {item.disabled && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md
+                        bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        בקרוב
+                      </span>
+                    )}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+      </aside>
 
-    </aside>
+      {/* Confirmation dialog — only shown when on analysis page */}
+      {pendingHref && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          dir="rtl"
+        >
+          <div className="w-full max-w-xs bg-white dark:bg-slate-900 rounded-3xl
+            border border-slate-100 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">
+              {'לצאת מהניתוח?'}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              {'היציאה תמחק את ההתקדמות הנוכחית ותצטרך להתחיל מחדש.'}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={confirmLeave}
+                className="flex-1 py-2.5 rounded-xl
+                  bg-slate-900 dark:bg-white
+                  text-white dark:text-slate-900
+                  text-sm font-bold
+                  hover:bg-slate-700 dark:hover:bg-slate-100
+                  transition-colors duration-200"
+              >
+                {'כן, צא'}
+              </button>
+              <button
+                onClick={() => setPendingHref(null)}
+                className="flex-1 py-2.5 rounded-xl
+                  border border-slate-200 dark:border-slate-700
+                  text-slate-600 dark:text-slate-300
+                  text-sm font-semibold
+                  hover:bg-slate-50 dark:hover:bg-slate-800
+                  transition-colors duration-200"
+              >
+                {'לא, חזור'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

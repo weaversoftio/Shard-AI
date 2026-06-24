@@ -362,9 +362,8 @@ export default function AnalysisPage() {
   const { status: authStatus } = useSession()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const gender = searchParams.get('gender') ?? 'other'
   const [mounted, setMounted] = useState(false)
+  const [gender, setGender] = useState<string | null>(null)
 
   const [sessionId] = useState(() =>
     typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).slice(2)
@@ -403,16 +402,9 @@ export default function AnalysisPage() {
     return () => window.removeEventListener('beforeunload', cleanup)
   }, [cleanup])
 
-  // X button — always full cleanup + home
-  const handleClose = async () => {
-    await cleanup()
-    router.push('/')
-  }
-
-  // Step 1 back → gender selection (cleanup since we're abandoning this session)
-  const handleBackStep1 = async () => {
-    await cleanup()
-    router.push('/?selectGender=1')
+  // Step 1 back → go back to gender selection
+  const handleBackStep1 = () => {
+    setGender(null)
   }
 
   // Step 2 back → step 1 (no cleanup, still in flow)
@@ -516,6 +508,47 @@ export default function AnalysisPage() {
       {/* Main content */}
       <main className="min-h-[calc(100vh-65px)] flex flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg mx-auto animate-slide-up">
+
+          {/* ── STEP 0: Gender selection ── */}
+          {gender === null && (
+            <div className="w-full max-w-sm mx-auto" dir="rtl">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                  {'פנייה בדוח'}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {'כיצד תרצה/י שנתייחס אליך?'}
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  { id: 'male',   label: 'גבר',   sub: 'הדוח יכתב בלשון זכר' },
+                  { id: 'female', label: 'אישה',  sub: 'הדוח יכתב בלשון נקבה' },
+                  { id: 'other',  label: 'אחר',   sub: 'הדוח יכתב בלשון נייטרלית' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setGender(opt.id)}
+                    className="w-full py-4 px-5 rounded-2xl border-2 border-slate-100
+                      dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600
+                      hover:bg-slate-50 dark:hover:bg-slate-800/60
+                      bg-white dark:bg-slate-900
+                      text-right transition-all duration-200"
+                  >
+                    <span className="block text-base font-semibold text-slate-800 dark:text-slate-100">
+                      {opt.label}
+                    </span>
+                    <span className="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      {opt.sub}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── STEPS 1 + 2 (upload flow) ── */}
+          {gender !== null && (<>
 
           {/* 4-step progress indicator */}
           <div className="mb-8">
@@ -732,6 +765,8 @@ export default function AnalysisPage() {
               </div>
             )}
           </div>
+          </>)}
+
         </div>
       </main>
 

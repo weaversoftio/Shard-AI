@@ -66,15 +66,22 @@ export function UserMenu({ onBeforeSignOut }: UserMenuProps) {
 
       {open && (
         <div
-          className="absolute left-0 top-full mt-2 w-44 bg-white dark:bg-slate-800 rounded-2xl
+          className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl
             border border-slate-200 dark:border-slate-700 shadow-lg shadow-black/10 overflow-hidden z-50"
           dir="rtl"
         >
-          {session?.user?.name && (
+          {session?.user && (
             <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
-                {session.user.name}
-              </p>
+              {session.user.name && (
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                  {session.user.name}
+                </p>
+              )}
+              {session.user.email && (
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                  {session.user.email}
+                </p>
+              )}
             </div>
           )}
           <button

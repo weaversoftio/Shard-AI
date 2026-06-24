@@ -479,8 +479,7 @@ export default function AnalysisPage() {
   if (authStatus === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center
-        bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60
-        dark:from-gray-950 dark:via-slate-900 dark:to-blue-950/40">
+        bg-[var(--background)] dark:bg-slate-950">
         <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
       </div>
     )
@@ -488,33 +487,12 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500
-      bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60
-      dark:from-gray-950 dark:via-slate-900 dark:to-blue-950/40">
-
-      {/* Ambient glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2
-          w-[600px] h-[400px] rounded-full blur-[120px] opacity-20 dark:opacity-10
-          bg-gradient-to-r from-blue-400 to-violet-400" />
-      </div>
+      bg-[var(--background)] dark:bg-slate-950">
 
       {/* Top bar */}
-      <header className="fixed top-0 inset-x-0 z-20 flex items-center justify-between px-5 py-4">
-        {/* X button — exits and clears session */}
-        <button
-          onClick={handleClose}
-          aria-label="יציאה"
-          className="w-9 h-9 rounded-full flex items-center justify-center
-            bg-white/80 dark:bg-slate-800/80 backdrop-blur-md
-            border border-slate-200/80 dark:border-slate-700/80
-            text-slate-500 dark:text-slate-400
-            hover:text-red-600 dark:hover:text-red-400
-            hover:bg-white dark:hover:bg-slate-700
-            transition-all duration-200 shadow-sm"
-        >
-          <XIcon />
-        </button>
-
+      <header className="sticky top-0 z-20 flex items-center justify-end px-5 py-4
+        bg-[var(--background)]/95 dark:bg-slate-950/95 backdrop-blur-sm
+        border-b border-slate-100/60 dark:border-slate-800/60">
         <div className="flex items-center gap-2.5">
           {mounted && (
             <button
@@ -536,7 +514,7 @@ export default function AnalysisPage() {
       </header>
 
       {/* Main content */}
-      <main className="min-h-screen flex flex-col items-center justify-center px-4 pb-8 pt-24">
+      <main className="min-h-[calc(100vh-65px)] flex flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg mx-auto animate-slide-up">
 
           {/* 4-step progress indicator */}
@@ -555,6 +533,12 @@ export default function AnalysisPage() {
 
                 {/* Header */}
                 <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md
+                      bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-black">
+                      מבחן 1
+                    </span>
+                  </div>
                   <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-1">
                     פורמט שורות
                   </h2>
@@ -650,6 +634,12 @@ export default function AnalysisPage() {
 
                 {/* Header */}
                 <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md
+                      bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-black">
+                      מבחן 2
+                    </span>
+                  </div>
                   <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-1">
                     פורמט חלק
                   </h2>

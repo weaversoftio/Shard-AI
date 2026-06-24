@@ -3,29 +3,29 @@
 import { useSession, signIn } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { FormatModal } from '@/components/FormatModal'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { UserMenu } from '@/components/UserMenu'
+import Image from 'next/image'
+
+// ── Icons ──────────────────────────────────────────────────────────────────────
 
 function SunIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="5" />
-      <line x1="12" y1="1" x2="12" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="23" />
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-      <line x1="1" y1="12" x2="3" y2="12" />
-      <line x1="21" y1="12" x2="23" y2="12" />
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+      <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
     </svg>
   )
 }
 
 function MoonIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   )
@@ -33,7 +33,7 @@ function MoonIcon() {
 
 function GoogleIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
@@ -42,21 +42,44 @@ function GoogleIcon() {
   )
 }
 
-function PenIcon() {
+function BookOpenIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500 dark:text-blue-400">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
     </svg>
   )
 }
 
-// ── Gender modal ───────────────────────────────────────────────────────────────
-const GENDER_OPTIONS = [
-  { id: 'male',   label: 'גבר',   sub: 'הדוח יכתב בלשון זכר' },
-  { id: 'female', label: 'אישה',  sub: 'הדוח יכתב בלשון נקבה' },
-  { id: 'other',  label: 'אחר',   sub: 'הדוח יכתב בלשון ניטרלית' },
-] as const
+function ShieldIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  )
+}
+
+function BrainIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-1.98-3 2.5 2.5 0 0 1-1.32-4.24 3 3 0 0 1 .34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.1-2.48Z" />
+      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 1.98-3 2.5 2.5 0 0 0 1.32-4.24 3 3 0 0 0-.34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.1-2.48Z" />
+    </svg>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  )
+}
 
 function XIcon() {
   return (
@@ -67,6 +90,14 @@ function XIcon() {
   )
 }
 
+// ── Gender Modal ───────────────────────────────────────────────────────────────
+
+const GENDER_OPTIONS = [
+  { id: 'male',   label: 'גבר',   sub: 'הדוח יכתב בלשון זכר' },
+  { id: 'female', label: 'אישה',  sub: 'הדוח יכתב בלשון נקבה' },
+  { id: 'other',  label: 'אחר',   sub: 'הדוח יכתב בלשון נייטרלית' },
+] as const
+
 function GenderModal({
   onSelect,
   onClose,
@@ -74,26 +105,37 @@ function GenderModal({
   onSelect: (gender: string) => void
   onClose: () => void
 }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handleKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4
-      bg-black/40 backdrop-blur-sm animate-fade-in" dir="rtl">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl
-        border border-slate-200 dark:border-slate-700 shadow-2xl shadow-black/20 p-8 space-y-6">
+      bg-black/40 backdrop-blur-sm" dir="rtl">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl
+        border border-slate-100 dark:border-slate-800 shadow-2xl shadow-black/20 p-8 space-y-6">
 
-        {/* Header with X */}
         <div className="flex items-start justify-between">
-          <div className="space-y-1.5">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">פנייה בדוח</h2>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+              {'פנייה בדוח'}
+            </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              כיצד תרצה/י שנתייחסו אליך בדוח הגרפולוגי?
+              {'כיצד תרצה/י שנתייחסו אליך?'}
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="p-2 -mt-1 -ml-1 rounded-xl text-slate-400 hover:text-slate-700
-              dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700
-              transition-colors flex-shrink-0"
+            className="p-2 -mt-1 rounded-full text-slate-400
+              hover:text-white hover:bg-red-500 dark:hover:bg-red-500
+              transition-colors duration-200 flex-shrink-0"
           >
             <XIcon />
           </button>
@@ -104,13 +146,13 @@ function GenderModal({
             <button
               key={opt.id}
               onClick={() => onSelect(opt.id)}
-              className="w-full py-4 px-5 rounded-2xl border-2 border-slate-200
-                dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500
-                hover:bg-blue-50/60 dark:hover:bg-blue-950/30
-                text-right transition-all duration-150 group"
+              className="w-full py-4 px-5 rounded-2xl border-2 border-slate-100
+                dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600
+                hover:bg-slate-50 dark:hover:bg-slate-800/60
+                text-right transition-all duration-200 focus:outline-none
+                focus-visible:ring-2 focus-visible:ring-slate-400"
             >
-              <span className="block text-base font-semibold text-slate-800 dark:text-slate-100
-                group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+              <span className="block text-base font-semibold text-slate-800 dark:text-slate-100">
                 {opt.label}
               </span>
               <span className="block text-xs font-normal text-slate-400 dark:text-slate-500 mt-0.5">
@@ -124,26 +166,42 @@ function GenderModal({
   )
 }
 
+// ── Feature Card ───────────────────────────────────────────────────────────────
+
+function FeatureCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <div className="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800
+      rounded-2xl p-5 text-right shadow-sm">
+      <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-700/60
+        border border-slate-100 dark:border-slate-700
+        flex items-center justify-center mb-3 text-slate-600 dark:text-slate-300">
+        {icon}
+      </div>
+      <p className="font-semibold text-slate-800 dark:text-white text-sm mb-1">{title}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{body}</p>
+    </div>
+  )
+}
+
 // ── Page ────────────────────────────────────────────────────────────────────────
+
 export default function Home() {
   const { data: session, status } = useSession()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
-  const [showFormatModal, setShowFormatModal] = useState(false)
   const [showGenderModal, setShowGenderModal] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Auto-open gender modal when navigating back from the upload page
   useEffect(() => {
     if (status !== 'authenticated') return
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('selectGender') === '1') {
+    if (searchParams.get('selectGender') === '1') {
       setShowGenderModal(true)
       window.history.replaceState({}, '', '/')
     }
-  }, [status])
+  }, [status, searchParams])
 
   const isLoggedIn = status === 'authenticated'
   const isLoading  = status === 'loading'
@@ -154,32 +212,33 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden transition-colors duration-500
-      bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60
-      dark:from-gray-950 dark:via-slate-900 dark:to-blue-950/40">
+    <div className="min-h-screen bg-[var(--background)] dark:bg-slate-950 transition-colors duration-300">
 
-      {/* Ambient glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2
-          w-[600px] h-[400px] rounded-full blur-[120px] opacity-20 dark:opacity-10
-          bg-gradient-to-r from-blue-400 to-violet-400" />
-      </div>
-
-      {/* Top bar */}
-      <header className="fixed top-0 inset-x-0 z-20 flex items-center justify-between px-5 py-4">
-        <div />
+      {/* Header */}
+      <header className="sticky top-0 z-20 flex items-center justify-between px-5 py-4
+        bg-[var(--background)]/95 dark:bg-slate-950/95 backdrop-blur-sm
+        border-b border-slate-100/60 dark:border-slate-800/60">
         <div className="flex items-center gap-2.5">
+          <div className="relative w-8 h-8 flex-shrink-0">
+            <Image src="/logo.png" alt="Shard AI" fill unoptimized
+              className="object-contain rounded-xl" priority />
+          </div>
+          <span className="font-bold text-slate-800 dark:text-white text-sm tracking-wide hidden sm:block">
+            SHARD AI
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
           {mounted && (
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label="toggle theme"
               className="w-9 h-9 rounded-full flex items-center justify-center
-                bg-white/80 dark:bg-slate-800/80 backdrop-blur-md
+                bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm
                 border border-slate-200/80 dark:border-slate-700/80
                 text-slate-500 dark:text-slate-400
                 hover:text-slate-700 dark:hover:text-slate-200
                 hover:bg-white dark:hover:bg-slate-700
-                transition-all duration-200 shadow-sm"
-              aria-label="החלף מצב תצוגה"
+                transition-all duration-200 shadow-sm focus:outline-none"
             >
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
@@ -188,101 +247,128 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="min-h-screen flex flex-col items-center justify-center px-4 pb-8 pt-20">
-        <div className="text-center w-full max-w-md mx-auto animate-slide-up">
+      {/* Main */}
+      <main className="relative z-10 flex flex-col items-center justify-center
+        min-h-[calc(100vh-65px)] px-5 py-12" dir="rtl">
 
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center
-              bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm
-              border border-slate-200/60 dark:border-slate-700/60
-              shadow-lg shadow-blue-500/10">
-              <PenIcon />
-            </div>
+        {/* Hero */}
+        <section className="w-full max-w-lg mx-auto text-center mb-14 animate-slide-up">
+
+          <div className="flex justify-center mb-4">
+            <Image src="/logo.png" alt="Shard AI" width={280} height={280}
+              unoptimized className="drop-shadow-xl" priority />
           </div>
 
-          {/* Title */}
-          <h1 className="text-6xl sm:text-7xl font-black tracking-tight leading-none mb-3">
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600
-              dark:from-blue-400 dark:via-indigo-400 dark:to-violet-400
-              bg-clip-text text-transparent">
-              SHARD
+          <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white
+            tracking-tight leading-tight mb-4">
+            {'אבחון גרפולוגי'}
+            <br />
+            <span className="text-slate-400 dark:text-slate-500 font-light">
+              {'מבוסס בינה מלאכותית'}
             </span>
-            <span className="text-slate-800 dark:text-white"> AI</span>
           </h1>
 
-          {/* Divider */}
-          <div className="flex justify-center my-5">
-            <div className="h-px w-24 bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-600 to-transparent" />
-          </div>
+          <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400
+            leading-relaxed max-w-sm mx-auto mb-8">
+            {'כלי מתקדם לאבחון גרפולוגי אקדמי — מנתח את כתב היד שלך ומפיק דוח אישיות מפורט ומקצועי.'}
+          </p>
 
-          <p className="text-2xl sm:text-3xl font-semibold text-slate-700 dark:text-slate-200 mb-2 leading-snug">
-            דוח גרפולוגיה
-          </p>
-          <p className="text-base text-slate-400 dark:text-slate-500 mb-12 font-normal">
-            ניתוח כתב יד חכם מבוסס בינה מלאכותית
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+            {[
+              'מבוסס מחקר אקדמי',
+              'פרטיות מלאה',
+              'תוצאות בדקות',
+            ].map(badge => (
+              <span key={badge}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                  bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700
+                  text-xs font-medium text-slate-500 dark:text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                {badge}
+              </span>
+            ))}
+          </div>
 
           {/* CTA */}
           {isLoading ? (
-            <div className="flex justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            <div className="flex justify-center py-4">
+              <div className="w-6 h-6 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
             </div>
           ) : isLoggedIn ? (
             <div className="flex flex-col items-center gap-4 animate-fade-in">
               <p className="text-sm text-slate-400 dark:text-slate-500">
-                ברוך הבא,{' '}
+                {'שלום,'}{' '}
                 <span className="text-slate-600 dark:text-slate-300 font-medium">
                   {session?.user?.name?.split(' ')[0] ?? 'משתמש'}
                 </span>
               </p>
               <button
                 onClick={() => setShowGenderModal(true)}
-                className="inline-flex items-center justify-center gap-2 px-8 py-4
-                  bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600
-                  hover:from-blue-500 hover:via-indigo-500 hover:to-violet-500
-                  text-white font-bold text-lg rounded-2xl
-                  shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40
-                  transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-95
-                  w-full sm:w-auto"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2
+                  px-10 py-4 rounded-2xl
+                  bg-slate-900 hover:bg-slate-700 dark:bg-white dark:hover:bg-slate-100
+                  text-white dark:text-slate-900 font-bold text-base
+                  shadow-md hover:shadow-lg
+                  transition-all duration-200 hover:-translate-y-0.5 active:scale-95
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               >
-                התחל ניתוח
-              </button>
-              {/* Instructions — visible to authenticated users only */}
-              <button
-                onClick={() => setShowFormatModal(true)}
-                className="px-6 py-2.5 text-sm font-medium rounded-xl
-                  bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm
-                  border border-slate-200 dark:border-slate-700
-                  text-slate-500 dark:text-slate-400
-                  hover:text-slate-700 dark:hover:text-slate-200
-                  hover:bg-white dark:hover:bg-slate-700
-                  transition-all duration-200 shadow-sm"
-              >
-                הוראות ופורמט
+                {'התחל ניתוח'}
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => signIn('google')}
-              className="inline-flex items-center justify-center gap-3 px-6 py-3.5
-                bg-white dark:bg-slate-800
-                hover:bg-slate-50
-                text-slate-700 dark:text-slate-200 font-semibold text-base
-                rounded-2xl border border-slate-200 dark:border-slate-700
-                shadow-md hover:shadow-lg
-                transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-95
-                w-full sm:w-auto"
-            >
-              <span>כניסה עם Google</span>
-              <GoogleIcon />
-            </button>
+            <div className="flex flex-col items-center gap-3 animate-fade-in">
+              <button
+                onClick={() => signIn('google')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3
+                  px-7 py-4 rounded-2xl
+                  bg-white dark:bg-slate-800 text-slate-800 dark:text-white
+                  font-semibold text-base
+                  border border-slate-200 dark:border-slate-700
+                  shadow-md hover:shadow-lg
+                  transition-all duration-200 hover:-translate-y-0.5 active:scale-95
+                  focus:outline-none"
+              >
+                <span>{'כניסה עם Google'}</span>
+                <GoogleIcon />
+              </button>
+              <button
+                onClick={() => router.push('/guide')}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl
+                  text-sm font-medium text-slate-400 hover:text-slate-600
+                  dark:text-slate-500 dark:hover:text-slate-300
+                  transition-colors duration-200 focus:outline-none"
+              >
+                <BookOpenIcon />
+                {'כיצד זה עובד?'}
+              </button>
+            </div>
           )}
-        </div>
+        </section>
+
+        {/* Feature cards */}
+        <section className="w-full max-w-lg mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <FeatureCard
+              icon={<BrainIcon />}
+              title={'אקדמי ומדויק'}
+              body={'מתודולוגיה גרפולוגית מבוססת מחקר עם ניתוח AI מתקדם.'}
+            />
+            <FeatureCard
+              icon={<ClockIcon />}
+              title={'מהיר ופשוט'}
+              body={'תהליך ידידותי — מהגשה לדוח אישי תוך מספר דקות.'}
+            />
+            <FeatureCard
+              icon={<ShieldIcon />}
+              title={'פרטי ומאובטח'}
+              body={'הנתונים שלך נשמרים רק לצורך הניתוח ולא מועברים לגורם שלישי.'}
+            />
+          </div>
+        </section>
+
       </main>
 
-      {showFormatModal && <FormatModal onClose={() => setShowFormatModal(false)} />}
+      {/* Modals */}
       {showGenderModal && (
         <GenderModal
           onSelect={handleGenderSelect}

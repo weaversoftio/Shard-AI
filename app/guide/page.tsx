@@ -212,18 +212,18 @@ export default function GuidePage() {
   useEffect(() => { setMounted(true) }, [])
 
   const test1Steps = [
-    { num: '01', title: 'הורדת הפורמט', body: 'הורידו את פורמט השורות מעמוד "הוראות ופורמטים".' },
-    { num: '02', title: 'מילוי 20 שורות', body: 'כתבו 20 שורות על נושא חופשי בכתב יד טבעי שלכם — לא לחשוב יותר מדי.' },
-    { num: '03', title: 'חתימה במקום הנדרש', body: 'חתמו בשורה הקצרה בתחתית הדף. החתימה חיונית לניתוח ואין לדלג עליה.' },
-    { num: '04', title: 'סריקה תקינה', body: 'סרקו דרך מדפסת/סורק בלבד. ודאו שהמסגרת המלאה נכללת. לא לצלם עם טלפון.' },
-    { num: '05', title: 'העלאת הקובץ', body: 'העלו את הקובץ הסרוק כ-PDF בלבד דרך מסך "התחל ניתוח".' },
+    { num: '01', title: 'הורדת הפורמט', body: 'הורידו את פורמט השורות.' },
+    { num: '02', title: 'כתיבת 20 שורות', body: 'כתבו 20 שורות על נושא לבחירתכם.' },
+    { num: '03', title: 'חתימה', body: 'חתמו בשורה הקצרה בתחתית הדף. החתימה חיונית לניתוח ואין לדלג עליה.' },
+    { num: '04', title: 'סריקת הפורמט', body: 'לתוצאות מדוייקות יותר- לסרוק דרך מדפסת/ סורק. סריקה דרך טלפון עלולה לפגוע בתוצאות הניתוח.' },
+    { num: '05', title: 'העלאת הקובץ', body: 'העלו את הקובץ הסרוק כ-PDF בלבד.' },
   ]
 
   const test2Steps = [
-    { num: '01', title: 'הורדת הפורמט', body: 'הורידו את הדף הריק מעמוד "הוראות ופורמטים".' },
-    { num: '02', title: 'כתיבת מספרים 1–30', body: 'כתבו את המספרים 1 עד 30 בכתב יד ברור, מסודרים ב-3 טורים.' },
-    { num: '03', title: 'סריקה תקינה', body: 'סרקו דרך מדפסת/סורק. ודאו שהמסגרת המלאה מופיעה בסריקה.' },
-    { num: '04', title: 'העלאת הקובץ', body: 'העלו את הקובץ הסרוק כ-PDF דרך מסך "התחל ניתוח" — שלב מבחן 2.' },
+    { num: '01', title: 'הורדת הפורמט', body: 'הורידו את הפורמט החלק.' },
+    { num: '02', title: 'כתיבת מספרים 1-30', body: 'כתבו את המספרים 1 עד 30 בכתב יד ברור, מסודרים ב-3 טורים.' },
+    { num: '03', title: 'סריקת הפורמט', body: 'לתוצאות מדוייקות יותר- לסרוק דרך מדפסת/ סורק. סריקה דרך טלפון עלולה לפגוע בתוצאות הניתוח.' },
+    { num: '04', title: 'העלאת הקובץ', body: 'העלו את הקובץ הסרוק כ-PDF בלבד.' },
   ]
 
   return (
@@ -277,7 +277,7 @@ export default function GuidePage() {
                   : 'text-slate-500 dark:text-slate-400'
                 }`}
             >
-              {tab === 1 ? 'מבחן 1 — פורמט שורות' : 'מבחן 2 — פורמט חלק'}
+              {tab === 1 ? 'מבחן 1: פורמט שורות' : 'מבחן 2: פורמט חלק'}
             </button>
           ))}
         </div>
@@ -289,7 +289,7 @@ export default function GuidePage() {
             {/* Steps */}
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-                שלבים — {test1Steps.length} שלבים
+                שלבים ({test1Steps.length})
               </p>
               <div className="space-y-2">
                 {test1Steps.map(s => <StepCard key={s.num} {...s} />)}
@@ -299,7 +299,7 @@ export default function GuidePage() {
             {/* Visual examples */}
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-                דוגמאות — כך יראה הדף
+                דוגמאות
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <ExampleCard
@@ -339,7 +339,7 @@ export default function GuidePage() {
             {/* Steps */}
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-                שלבים — {test2Steps.length} שלבים
+                שלבים ({test2Steps.length})
               </p>
               <div className="space-y-2">
                 {test2Steps.map(s => <StepCard key={s.num} {...s} />)}
@@ -349,12 +349,12 @@ export default function GuidePage() {
             {/* Visual examples */}
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
-                דוגמאות — כך יראה הדף
+                דוגמאות
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <ExampleCard
                   illustration={<IllustrationBlankCorrect />}
-                  label="דף תקין — 3 טורים"
+                  label="דף תקין - 3 טורים"
                   desc="בדיוק 3 טורים עם מספרים 1–30"
                   variant="ok"
                 />
@@ -367,7 +367,7 @@ export default function GuidePage() {
                 <ExampleCard
                   illustration={<IllustrationWrongColumns />}
                   label="יותר או פחות מ-3 טורים"
-                  desc="יש לסדר בדיוק 3 טורים — לא פחות ולא יותר"
+                  desc="יש לסדר בדיוק 3 טורים, לא פחות ולא יותר"
                   variant="warning"
                 />
               </div>

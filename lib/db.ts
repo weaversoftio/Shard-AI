@@ -88,3 +88,21 @@ export function getReportById(
     `)
     .get(id, userEmail) as ReportRecord | undefined
 }
+
+export function deleteReport(id: string, userEmail: string): boolean {
+  const result = getDb()
+    .prepare('DELETE FROM report_history WHERE id = ? AND user_email = ?')
+    .run(id, userEmail)
+  return result.changes > 0
+}
+
+export function updateReportTitle(
+  id:        string,
+  userEmail: string,
+  newTitle:  string,
+): boolean {
+  const result = getDb()
+    .prepare('UPDATE report_history SET report_title = ? WHERE id = ? AND user_email = ?')
+    .run(newTitle, id, userEmail)
+  return result.changes > 0
+}

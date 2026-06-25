@@ -111,6 +111,7 @@ interface ValidationResult {
   status: 'ok' | 'warning' | 'error'
   error_type?: string
   line_count?: number
+  column_count?: number
   message?: string
   cropFiles?: string[]
 }
@@ -279,7 +280,7 @@ function CropPreview({ sessionId, type, files, cacheKey }: CropPreviewProps) {
       <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700
         flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-          תצוגה מקדימה — {files.length} חיתוכים
+          תצוגה מקדימה - {files.length} חיתוכים
         </span>
         <span className="text-xs text-slate-400 dark:text-slate-500">
           {cropLabel(activeFile)}
@@ -453,14 +454,20 @@ export default function AnalysisPage() {
       const data = (await res.json()) as ValidationResult
       setBlankResult(data)
       setBlankCacheKey(Date.now())
-      setBlankStatus(data.status === 'ok' ? 'ok' : 'error')
+      if (data.status !== 'ok' && data.status !== 'warning') {
+        setBlankStatus('error')
+      } else if (data.column_count !== undefined && data.column_count !== 3) {
+        setBlankStatus('warning')
+      } else {
+        setBlankStatus('ok')
+      }
     } catch {
       setBlankStatus('error')
       setBlankResult({ status: 'error', error_type: 'PROCESSING_ERROR' })
     }
   }
 
-  const canStartAnalysis = blankStatus === 'ok'
+  const canStartAnalysis = blankStatus === 'ok' || blankStatus === 'warning'
 
   const handleStartAnalysis = () => {
     if (!canStartAnalysis || isStarting) return
@@ -575,13 +582,13 @@ export default function AnalysisPage() {
                   <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-1">
                     פורמט שורות
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 leading-relaxed font-medium">
                     יש לכתוב 20 שורות על נושא לבחירתכם ולחתום בשורה הקצרה בתחתית הדף.
                   </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
                     עדיף להשתמש בעט כדורי בצבע שחור או כחול.
                   </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
                     לתוצאות מדויקות יותר, מומלץ לסרוק דרך מדפסת.
                   </p>
                 </div>
@@ -676,13 +683,13 @@ export default function AnalysisPage() {
                   <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-1">
                     פורמט חלק
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 leading-relaxed font-medium">
                     כתבו את המספרים 1 עד 30 על הדף, מסודרים ב-3 טורים.
                   </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
                     עדיף להשתמש בעט כדורי בצבע שחור או כחול.
                   </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1.5 font-medium">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
                     לתוצאות מדויקות יותר, מומלץ לסרוק דרך מדפסת.
                   </p>
                 </div>
@@ -716,13 +723,15 @@ export default function AnalysisPage() {
                     message={
                       blankStatus === 'ok'
                         ? 'הקובץ הועלה בהצלחה!'
-                        : getErrorMessage(blankResult, 2)
+                        : blankStatus === 'warning'
+                          ? 'זוהו יותר או פחות מ-3 טורים, דבר זה עלול להשפיע על התוצאות.'
+                          : getErrorMessage(blankResult, 2)
                     }
                   />
                 )}
 
                 {/* Blank page preview */}
-                {blankStatus === 'ok' && blankResult?.cropFiles && blankResult.cropFiles.length > 0 && (
+                {(blankStatus === 'ok' || blankStatus === 'warning') && blankResult?.cropFiles && blankResult.cropFiles.length > 0 && (
                   <CropPreview
                     sessionId={sessionId}
                     type="blank"

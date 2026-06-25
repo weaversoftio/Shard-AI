@@ -265,15 +265,17 @@ function ReportScreen({
         bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-5 py-3">
         <div className="relative flex items-center h-9">
 
-          {/* X button — pinned to physical right */}
+          {/* Home button — pinned to physical right */}
           <button
             onClick={onBack}
-            aria-label="יציאה"
-            className="absolute right-0 w-8 h-8 rounded-full flex items-center justify-center
-              text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400
+            aria-label="חזרה לדף הבית"
+            className="absolute right-0 flex items-center gap-1.5 px-3 h-8 rounded-xl
+              text-xs font-medium
+              text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white
               hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           >
-            <XIcon />
+            <HomeIcon />
+            <span className="hidden sm:inline">בית</span>
           </button>
 
           {/* Stepper — truly centered regardless of side widths */}

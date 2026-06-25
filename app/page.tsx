@@ -171,10 +171,10 @@ function GenderModal({
 function FeatureCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800
-      rounded-2xl p-5 text-right shadow-sm">
+      rounded-2xl p-5 text-center shadow-sm">
       <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-700/60
         border border-slate-100 dark:border-slate-700
-        flex items-center justify-center mb-3 text-slate-600 dark:text-slate-300">
+        flex items-center justify-center mb-3 text-slate-600 dark:text-slate-300 mx-auto">
         {icon}
       </div>
       <p className="font-semibold text-slate-800 dark:text-white text-sm mb-1">{title}</p>
@@ -258,15 +258,7 @@ export default function Home() {
       <header className="sticky top-0 z-20 flex items-center justify-between px-5 py-4
         bg-[var(--background)]/95 dark:bg-slate-950/95 backdrop-blur-sm
         border-b border-slate-100/60 dark:border-slate-800/60">
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-8 h-8 flex-shrink-0">
-            <Image src="/logo.png" alt="Shard AI" fill unoptimized
-              className="object-contain rounded-xl" priority />
-          </div>
-          <span className="font-bold text-slate-800 dark:text-white text-sm tracking-wide hidden sm:block">
-            SHARD AI
-          </span>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           {mounted && (
             <button
@@ -310,7 +302,7 @@ export default function Home() {
 
           <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400
             leading-relaxed max-w-sm mx-auto mb-8">
-            {'כלי מתקדם לאבחון גרפולוגי אקדמי — מנתח את כתב היד שלך ומפיק דוח אישיות מפורט ומקצועי.'}
+            {'כלי מתקדם לאבחון גרפולוגי אקדמי, מנתח את כתב היד שלך ומפיק דוח אישיות מפורט ומקצועי.'}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
@@ -371,16 +363,6 @@ export default function Home() {
                 <span>{'כניסה עם Google'}</span>
                 <GoogleIcon />
               </button>
-              <button
-                onClick={() => router.push('/guide')}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl
-                  text-sm font-medium text-slate-400 hover:text-slate-600
-                  dark:text-slate-500 dark:hover:text-slate-300
-                  transition-colors duration-200 focus:outline-none"
-              >
-                <BookOpenIcon />
-                {'כיצד זה עובד?'}
-              </button>
             </div>
           )}
         </section>
@@ -396,7 +378,7 @@ export default function Home() {
             <FeatureCard
               icon={<ClockIcon />}
               title={'מהיר ופשוט'}
-              body={'תהליך ידידותי — מהגשה לדוח אישי תוך מספר דקות.'}
+              body={'תהליך ידידותי, מהגשה לדוח אישי תוך מספר דקות.'}
             />
             <FeatureCard
               icon={<ShieldIcon />}

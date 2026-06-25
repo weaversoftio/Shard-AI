@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { UserMenu } from '@/components/UserMenu'
+import { downloadReportAsPDF } from '@/lib/pdf-download'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -128,10 +129,11 @@ export default function PastReportPage() {
   const { theme, setTheme } = useTheme()
   const isDev   = process.env.NODE_ENV === 'development'
 
-  const [data,    setData]    = useState<SnapshotData | null>(null)
-  const [title,   setTitle]   = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState('')
+  const [data,        setData]        = useState<SnapshotData | null>(null)
+  const [title,       setTitle]       = useState('')
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState('')
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     fetch(`/api/history/${id}`)
@@ -154,7 +156,12 @@ export default function PastReportPage() {
   }, [id, router])
 
   const handleBack     = () => router.push('/history')
-  const handleDownload = () => window.print()
+  const handleDownload = async () => {
+    if (!data) return
+    setDownloading(true)
+    try { await downloadReportAsPDF(title, data.report) }
+    finally { setDownloading(false) }
+  }
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
@@ -199,7 +206,7 @@ export default function PastReportPage() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          aside { display: none !important; }
+          aside, nav, header, [role="navigation"] { display: none !important; }
           .print-report { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
           .print-report-body { padding: 0 !important; }
           body { background: white !important; color: #1e293b !important; }
@@ -277,10 +284,14 @@ export default function PastReportPage() {
         <div className="no-print flex gap-3 justify-start">
           <button
             onClick={handleDownload}
+            disabled={downloading}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm
-              bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
-            <DownloadIcon />
-            הורד כ-PDF
+              bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm
+              disabled:opacity-60">
+            {downloading
+              ? <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              : <DownloadIcon />}
+            {downloading ? 'יוצר PDF...' : 'הורד כ-PDF'}
           </button>
           <button
             onClick={handleBack}

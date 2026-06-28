@@ -14,3 +14,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 shard-ai.db
+shard-ai.db-shm
+shard-ai.db-wal

@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
-      proc = spawn('python', [scriptPath, '--session-dir', sessionDir, '--gender', gender], {
+      const pythonBin = process.env.PYTHON_BIN ?? 'python3'
+      proc = spawn(pythonBin, [scriptPath, '--session-dir', sessionDir, '--gender', gender], {
         env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' },
       })
 

@@ -3,7 +3,7 @@
 import { useSession, signIn } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { UserMenu } from '@/components/UserMenu'
 import Image from 'next/image'
 
@@ -223,7 +223,6 @@ export default function Home() {
   const { data: session, status } = useSession()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [toast, setToast] = useState<ToastType>(null)
   const toastRead = useRef(false)

@@ -19,7 +19,8 @@ export function runNormalization(
 ): Promise<NormalizeResult> {
   return new Promise((resolve) => {
     const scriptPath = join(process.cwd(), 'scripts', 'normalize_pipeline.py')
-    const proc = spawn('python', [
+    const pythonBin = process.env.PYTHON_BIN ?? 'python3'
+    const proc = spawn(pythonBin, [
       scriptPath,
       '--mode', mode,
       '--input', inputPath,
